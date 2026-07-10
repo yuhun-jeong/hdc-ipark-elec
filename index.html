@@ -874,8 +874,8 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 // ════════════════════════════════════
 //  Supabase 설정 (여기에 입력하세요)
 // ════════════════════════════════════
-const SUPABASE_URL = 'https://zzuktqkmvxsourstrbfd.supabase.co/rest/v1/';  // 예: https://xxxx.supabase.co
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY'; // eyJ...로 시작하는 키
+const SUPABASE_URL = 'https://zzuktqkmvxsourstrbfd.supabase.co';  // 예: https://xxxx.supabase.co
+const SUPABASE_KEY = 'sb_publishable_9Bi9cLrvTCKQD6IydLh3pA_ET4mP6lK'; // eyJ...로 시작하는 키
 
 const sb = {
   headers: {
@@ -1012,6 +1012,61 @@ async function doLogin(){
   rebuildHQThead();
   renderHQ();
   setTimeout(()=>showNotif('👋 로그인 완료',`${user.name}님, 환영합니다.`),300);
+  // Supabase에서 전체 users + 공정 상태 불러오기
+  loadUsersFromSupabase();
+  loadStatusFromSupabase();
+}
+
+// Supabase에서 전체 users 불러오기
+async function loadUsersFromSupabase(){
+  try {
+    const rows = await sb.select('users', '?order=id');
+    if(!rows || !rows.length) return;
+    USERS.length = 0;
+    rows.forEach(u => {
+      USERS.push({
+        id: u.id, pw: u.pw, name: u.name,
+        role: u.role, discipline: u.discipline||'',
+        siteIds: u.site_ids||[], active: u.active
+      });
+    });
+    console.log(`users 로드: ${USERS.length}명`);
+    // 관리자 탭 열려있으면 갱신
+    if(currentUser?.role==='ADMIN') renderAdmin();
+  } catch(e) { console.log('users 불러오기 실패:', e); }
+}
+
+// Supabase에서 work_status 불러오기
+async function loadStatusFromSupabase(){
+  try {
+    if(!currentUser) return;
+    const siteIdxList = currentUser.siteIds && currentUser.siteIds.length > 0
+      ? currentUser.siteIds
+      : sites.map((_,i)=>i);
+    for(const siteIdx of siteIdxList){
+      const siteId = siteIdx + 1;
+      const rows = await sb.select('work_status', `?site_id=eq.${siteId}`);
+      if(!rows || !rows.length) continue;
+      rows.forEach(row => {
+        sb.select('work_stages', `?id=eq.${row.stage_id}`).then(stageRows => {
+          if(!stageRows || !stageRows.length) return;
+          const taskIdx = stageRows[0].sort_order - 1;
+          if(sites[siteIdx] && sites[siteIdx].tasks[taskIdx]){
+            const t = sites[siteIdx].tasks[taskIdx];
+            if(row.status)    t.st       = row.status;
+            if(row.memo)      t.memo     = row.memo;
+            if(row.file_name) t.file     = row.file_name;
+            if(row.deadline)  t.deadline = row.deadline;
+          }
+        });
+      });
+    }
+    setTimeout(()=>{
+      rebuildHQThead(); renderHQ();
+      if(currentUser.role==='SITE') renderField();
+      if(currentUser.role==='MANAGER') renderManager();
+    }, 500);
+  } catch(e) { console.log('공정상태 불러오기 실패:', e); }
 }
 
 function doLogout(){
@@ -1974,6 +2029,7 @@ function renderAdminUser(){
           ${u.active===false
             ? `<button class="admin-action-btn react" onclick="adminToggleUser(${i})">복구</button>`
             : `<button class="admin-action-btn deact" onclick="adminToggleUser(${i})">비활성화</button>`}
+          <button class="admin-action-btn deact" onclick="adminDeleteUser(${i})" style="background:rgba(239,68,68,.1);color:#dc2626">삭제</button>
         </td>
       </tr>`).join('')}
     </tbody>`;
@@ -2057,7 +2113,7 @@ function adminToggleSite(i){
   showNotif(sites[i].active?'✅ 현장 복구':'🗑️ 현장 비활성화', `${sites[i].name} 상태가 변경됐어요.`);
 }
 
-async function adminAddUser(){
+function adminAddUser(){
   const id=document.getElementById('au-id').value.trim();
   const pw=document.getElementById('au-pw').value.trim();
   const name=document.getElementById('au-name').value.trim();
@@ -2066,25 +2122,11 @@ async function adminAddUser(){
   const siteIds=[...document.querySelectorAll('.au-site-chk:checked')].map(el=>parseInt(el.value));
   if(!id||!pw||!name){showNotif('⚠ 입력 오류','아이디, 비밀번호, 실명은 필수입니다.');return;}
   if(USERS.find(u=>u.id===id)){showNotif('⚠ 중복 오류','이미 존재하는 아이디입니다.');return;}
-  
-  // Supabase에 저장
-  try {
-    await sb.insert('users', {
-      id, pw, name, role, discipline,
-      site_ids: siteIds,
-      active: true
-    });
-    showNotif('👤 계정 추가 완료',`${name}(${id}) 계정이 생성됐어요.`);
-  } catch(e) {
-    showNotif('⚠ 저장 오류','Supabase 저장 실패. 다시 시도해주세요.');
-    console.log('계정 추가 오류:', e);
-    return;
-  }
-  
   USERS.push({id,pw,name,role,siteIds,discipline,active:true});
   ['au-id','au-pw','au-name'].forEach(i=>document.getElementById(i).value='');
   document.querySelectorAll('.au-site-chk:checked').forEach(el=>el.checked=false);
   renderAdmin();
+  showNotif('👤 계정 추가 완료',`${name}(${id}) 계정이 생성됐어요.`);
 }
 
 async function adminToggleUser(i){
@@ -2094,6 +2136,20 @@ async function adminToggleUser(i){
   } catch(e) { console.log('계정 상태 변경 오류:', e); }
   renderAdmin();
   showNotif(USERS[i].active?'✅ 계정 복구':'🚫 계정 비활성화',`${USERS[i].name} 계정 상태가 변경됐어요.`);
+}
+
+async function adminDeleteUser(i){
+  const u = USERS[i];
+  if(!confirm(`"${u.name}(${u.id})" 계정을 완전히 삭제할까요?\n이 작업은 되돌릴 수 없어요.`)) return;
+  try {
+    await sb.delete('users', `?id=eq.${u.id}`);
+    USERS.splice(i, 1);
+    renderAdmin();
+    showNotif('🗑️ 계정 삭제', `${u.name} 계정이 삭제됐어요.`);
+  } catch(e) {
+    showNotif('⚠ 삭제 오류', '삭제 중 오류가 발생했어요.');
+    console.log('계정 삭제 오류:', e);
+  }
 }
 
 // ════════════════════════════
