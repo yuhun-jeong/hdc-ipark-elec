@@ -1985,23 +1985,64 @@ function renderAdminSite(){
 }
 
 function renderAdminUser(){
-  saveState();
   const userTable=document.getElementById('admin-user-table');
   if(!userTable) return;
-  document.getElementById('admin-user-count').textContent=`총 ${USERS.length}명`;
-  const inputStyle='width:100%;border:1.5px solid var(--bd2);border-radius:6px;padding:5px 8px;font-size:12px;font-family:var(--sans);background:var(--surf2);color:var(--txt);';
+
+  // 검색/정렬 컨트롤
+  const searchVal = (document.getElementById('user-search')?.value||'').toLowerCase();
+  const sortVal   = document.getElementById('user-sort')?.value||'id';
+  const roleLabel={ADMIN:'관리자',HQ:'본사담당자',SITE:'현장담당자',MANAGER:'현장소장'};
+  const inputStyle='width:100%;border:1.5px solid var(--bd2);border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--sans);background:var(--surf2);color:var(--txt);';
+
+  // 필터링
+  let filtered = USERS.map((u,i)=>({u,i})).filter(({u})=>
+    !searchVal ||
+    u.id.toLowerCase().includes(searchVal) ||
+    u.name.toLowerCase().includes(searchVal) ||
+    (u.discipline||'').toLowerCase().includes(searchVal)
+  );
+
+  // 정렬
+  filtered.sort((a,b)=>{
+    if(sortVal==='name')   return a.u.name.localeCompare(b.u.name);
+    if(sortVal==='role')   return (a.u.role||'').localeCompare(b.u.role||'');
+    if(sortVal==='active') return (b.u.active?1:0)-(a.u.active?1:0);
+    return a.u.id.localeCompare(b.u.id);
+  });
+
+  document.getElementById('admin-user-count').textContent=`총 ${USERS.length}명 (표시 ${filtered.length}명)`;
+
   userTable.innerHTML=`
-    <thead><tr>
-      <th>아이디</th><th>비밀번호</th><th>이름</th><th>공종</th><th>소속/권한</th><th>배속 현장</th><th>상태</th><th>관리</th>
-    </tr></thead>
-    <tbody>${USERS.map((u,i)=>`
+    <thead>
       <tr>
+        <th colspan="8" style="padding:8px 10px;background:var(--surf1)">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="user-search" type="text" placeholder="🔍 아이디/이름/공종 검색"
+              value="${searchVal}"
+              style="border:1.5px solid var(--bd2);border-radius:6px;padding:5px 10px;font-size:12px;flex:1;min-width:140px;background:var(--bg);color:var(--t1)"
+              oninput="renderAdminUser()">
+            <select id="user-sort" style="border:1.5px solid var(--bd2);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--t1)"
+              onchange="renderAdminUser()">
+              <option value="id"     ${sortVal==='id'    ?'selected':''}>아이디순</option>
+              <option value="name"   ${sortVal==='name'  ?'selected':''}>이름순</option>
+              <option value="role"   ${sortVal==='role'  ?'selected':''}>권한순</option>
+              <option value="active" ${sortVal==='active'?'selected':''}>활성순</option>
+            </select>
+          </div>
+        </th>
+      </tr>
+      <tr>
+        <th>아이디</th><th>비밀번호</th><th>이름</th><th>공종</th><th>소속/권한</th><th>배속현장</th><th>상태</th><th>관리</th>
+      </tr>
+    </thead>
+    <tbody>${filtered.map(({u,i})=>`
+      <tr style="${u.active===false?'opacity:.5':''}">
         <td><input type="text" value="${u.id}" style="${inputStyle}font-family:var(--mono);" onchange="adminEditUserField(${i},'id',this.value)"></td>
         <td><input type="text" value="${u.pw}" style="${inputStyle}font-family:var(--mono);" onchange="adminEditUserField(${i},'pw',this.value)"></td>
         <td><input type="text" value="${u.name}" style="${inputStyle}" onchange="adminEditUserField(${i},'name',this.value)"></td>
         <td>
-          <select style="border:1.5px solid var(--bd2);border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--sans);background:var(--surf2);" onchange="adminEditUserField(${i},'discipline',this.value)">
-            <option value=""   ${!u.discipline?'selected':''}>—</option>
+          <select style="${inputStyle}" onchange="adminEditUserField(${i},'discipline',this.value)">
+            <option value=""    ${!u.discipline       ?'selected':''}>—</option>
             <option value="전기" ${u.discipline==='전기'?'selected':''}>전기</option>
             <option value="기계" ${u.discipline==='기계'?'selected':''}>기계</option>
             <option value="건축" ${u.discipline==='건축'?'selected':''}>건축</option>
@@ -2011,23 +2052,20 @@ function renderAdminUser(){
           </select>
         </td>
         <td>
-          <select style="border:1.5px solid var(--bd2);border-radius:6px;padding:4px 8px;font-size:11px;font-family:var(--sans);background:var(--surf2);font-weight:700;" onchange="adminEditUserField(${i},'role',this.value)">
-            <option value="SITE"    ${u.role==='SITE'   ?'selected':''}>현장 담당자</option>
+          <select style="${inputStyle}font-weight:700;" onchange="adminEditUserField(${i},'role',this.value)">
+            <option value="SITE"    ${u.role==='SITE'   ?'selected':''}>현장담당자</option>
             <option value="MANAGER" ${u.role==='MANAGER'?'selected':''}>현장소장</option>
-            <option value="HQ"      ${u.role==='HQ'     ?'selected':''}>본사 담당자</option>
+            <option value="HQ"      ${u.role==='HQ'     ?'selected':''}>본사담당자</option>
             <option value="ADMIN"   ${u.role==='ADMIN'  ?'selected':''}>관리자</option>
           </select>
         </td>
         <td>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:220px">
-            ${(u.siteIds&&u.siteIds.length)
-              ? u.siteIds.map(sid=>sites[sid]?`<span style="font-size:10px;font-weight:600;color:var(--acc);background:rgba(79,110,247,.08);border:1px solid rgba(79,110,247,.2);border-radius:4px;padding:2px 6px;white-space:nowrap">${sites[sid].name}</span>`:'').join('')
-              : `<span style="font-size:11px;color:var(--t3)">미배정</span>`}
-            <button class="admin-action-btn edit" onclick="openUserSites(${i})">수정</button>
-          </div>
+          <button class="admin-action-btn edit" onclick="openUserSites(${i})">현장설정</button>
+          <div style="font-size:10px;color:var(--t3);margin-top:2px">${(u.siteIds||[]).map(idx=>sites[idx]?.name||'?').join(', ')||'미배속'}</div>
         </td>
         <td><span class="status-badge-sm ${u.active===false?'inactive':'active'}">${u.active===false?'비활성':'활성'}</span></td>
-        <td style="display:flex;gap:6px">
+        <td style="display:flex;gap:4px;flex-wrap:wrap">
+          <button id="save-user-${i}" class="tbtn pri" style="font-size:11px;padding:4px 8px;display:none" onclick="saveUserEdit(${i})">💾 저장</button>
           ${u.active===false
             ? `<button class="admin-action-btn react" onclick="adminToggleUser(${i})">복구</button>`
             : `<button class="admin-action-btn deact" onclick="adminToggleUser(${i})">비활성화</button>`}
@@ -2035,6 +2073,7 @@ function renderAdminUser(){
         </td>
       </tr>`).join('')}
     </tbody>`;
+
   const auSiteList=document.getElementById('au-site-list');
   if(auSiteList) auSiteList.innerHTML=sites.map((s,i)=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
     <input type="checkbox" class="au-site-chk" value="${i}">
@@ -2042,27 +2081,59 @@ function renderAdminUser(){
   </label>`).join('');
 }
 
+
 function adminEditUserField(i, field, value){
   const u=USERS[i];
   const isSelf=currentUser===u;
+  if(!pendingUserEdits[i]) pendingUserEdits[i] = {...u};
+  
   if(field==='id'){
     const v=value.trim();
-    if(!v){ renderAdminUser(); return; }
-    if(v!==u.id && USERS.find(x=>x.id===v)){ showNotif('⚠ 중복 오류','이미 존재하는 아이디입니다.'); renderAdminUser(); return; }
-    u.id=v;
+    if(!v) return;
+    if(v!==u.id && USERS.find(x=>x.id===v)){ showNotif('⚠ 중복 오류','이미 존재하는 아이디입니다.'); return; }
+    pendingUserEdits[i].id=v;
   } else if(field==='pw'){
-    if(!value){ renderAdminUser(); return; }
-    u.pw=value;
+    if(!value) return;
+    pendingUserEdits[i].pw=value;
   } else if(field==='name'){
     const v=value.trim();
-    if(!v){ renderAdminUser(); return; }
-    u.name=v;
-    if(isSelf){ document.getElementById('user-name-chip').textContent=v; document.getElementById('user-avatar').textContent=v[0]; }
+    if(!v) return;
+    pendingUserEdits[i].name=v;
   } else if(field==='role'){
-    u.role=value;
+    pendingUserEdits[i].role=value;
+  } else if(field==='discipline'){
+    pendingUserEdits[i].discipline=value;
   }
-  renderAdminUser();
-  showNotif('✏️ 계정 수정',`${u.name} 계정 정보가 수정됐어요.`);
+  // 수정 중 표시
+  const saveBtn=document.getElementById(`save-user-${i}`);
+  if(saveBtn) saveBtn.style.display='inline-block';
+}
+
+async function saveUserEdit(i){
+  const u=USERS[i];
+  const edits=pendingUserEdits[i];
+  if(!edits) return;
+  
+  try {
+    await sb.update('users', `?id=eq.${u.id}`, {
+      id: edits.id,
+      pw: edits.pw,
+      name: edits.name,
+      role: edits.role,
+      discipline: edits.discipline||'',
+      site_ids: edits.siteIds||u.siteIds||[],
+      active: u.active
+    });
+    // 로컬 반영
+    Object.assign(USERS[i], edits);
+    delete pendingUserEdits[i];
+    if(currentUser?.id===u.id) Object.assign(currentUser, edits);
+    renderAdminUser();
+    showNotif('✅ 계정 저장',`${edits.name||u.name} 계정이 저장됐어요.`);
+  } catch(e) {
+    showNotif('⚠ 저장 오류','Supabase 저장 실패. 다시 시도해주세요.');
+    console.log('계정 수정 오류:', e);
+  }
 }
 
 let editingUserIdx=null;
