@@ -874,7 +874,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 // ════════════════════════════════════
 //  Supabase 설정 (여기에 입력하세요)
 // ════════════════════════════════════
-const SUPABASE_URL = 'https://zzuktqkmvxsourstrbfd.supabase.co';  // 예: https://xxxx.supabase.co
+const SUPABASE_URL = 'https://zzuktqkmvxsourstrbfd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_9Bi9cLrvTCKQD6IydLh3pA_ET4mP6lK'; // eyJ...로 시작하는 키
 
 const sb = {
@@ -1031,8 +1031,10 @@ async function loadUsersFromSupabase(){
       });
     });
     console.log(`users 로드: ${USERS.length}명`);
-    // 관리자 탭 열려있으면 갱신
-    if(currentUser?.role==='ADMIN') renderAdmin();
+    // 로드 완료 후 관리자 탭 갱신
+    setTimeout(()=>{
+      if(currentUser?.role==='ADMIN'||currentUser?.role==='HQ') renderAdmin();
+    }, 200);
   } catch(e) { console.log('users 불러오기 실패:', e); }
 }
 
@@ -2113,7 +2115,7 @@ function adminToggleSite(i){
   showNotif(sites[i].active?'✅ 현장 복구':'🗑️ 현장 비활성화', `${sites[i].name} 상태가 변경됐어요.`);
 }
 
-function adminAddUser(){
+async function adminAddUser(){
   const id=document.getElementById('au-id').value.trim();
   const pw=document.getElementById('au-pw').value.trim();
   const name=document.getElementById('au-name').value.trim();
@@ -2122,11 +2124,22 @@ function adminAddUser(){
   const siteIds=[...document.querySelectorAll('.au-site-chk:checked')].map(el=>parseInt(el.value));
   if(!id||!pw||!name){showNotif('⚠ 입력 오류','아이디, 비밀번호, 실명은 필수입니다.');return;}
   if(USERS.find(u=>u.id===id)){showNotif('⚠ 중복 오류','이미 존재하는 아이디입니다.');return;}
-  USERS.push({id,pw,name,role,siteIds,discipline,active:true});
-  ['au-id','au-pw','au-name'].forEach(i=>document.getElementById(i).value='');
-  document.querySelectorAll('.au-site-chk:checked').forEach(el=>el.checked=false);
-  renderAdmin();
-  showNotif('👤 계정 추가 완료',`${name}(${id}) 계정이 생성됐어요.`);
+  try {
+    const result = await sb.insert('users', {
+      id, pw, name, role, discipline,
+      site_ids: siteIds,
+      active: true
+    });
+    console.log('Supabase 계정 추가:', result);
+    USERS.push({id,pw,name,role,siteIds,discipline,active:true});
+    ['au-id','au-pw','au-name'].forEach(i=>document.getElementById(i).value='');
+    document.querySelectorAll('.au-site-chk:checked').forEach(el=>el.checked=false);
+    renderAdmin();
+    showNotif('👤 계정 추가 완료',`${name}(${id}) 계정이 생성됐어요.`);
+  } catch(e) {
+    showNotif('⚠ 저장 오류','Supabase 저장 실패. 다시 시도해주세요.');
+    console.log('계정 추가 오류:', e);
+  }
 }
 
 async function adminToggleUser(i){
