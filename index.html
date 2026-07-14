@@ -944,6 +944,10 @@ const sb = {
     });
     if(!res.ok) throw new Error('업로드 실패: ' + res.status);
     return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  },
+  // Storage 공개 URL 반환
+  getPublicUrl(bucket, path){
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
   }
 };
 </script>
@@ -1595,7 +1599,7 @@ const short=wrapText(s, 10);
     tbHtml+=`<td class="td-st sample">
       <div class="cell">
         ${f
-          ? `<button onclick="downloadSample(${i})" style="background:rgba(16,185,129,.1);color:var(--g);border:1px solid rgba(16,185,129,.2);border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;">⬇ 다운로드</button>`
+          ? `<button onclick="downloadSample(${i})" style="background:rgba(16,185,129,.1);color:var(--g);border:1px solid rgba(16,185,129,.2);border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;">⬇ ${(f.name||f)}</button>`
           : `<span class="badge sample" style="color:var(--t3)">— 미등록</span>`}
       </div></td>`;
   });
@@ -1685,15 +1689,28 @@ const short=wrapText(s, 10);
 }
 
 // 샘플 양식 업로드 (본사/관리자만)
-function openSampleUpload(stageIdx){
+async function openSampleUpload(stageIdx){
   if(!currentUser||!(currentUser.role==='HQ'||currentUser.role==='ADMIN')) return;
   const input=document.createElement('input');
   input.type='file';
-  input.onchange=e=>{
-    if(!e.target.files[0]) return;
-    sampleFiles[stageIdx]=e.target.files[0].name;
-    renderField(); renderHQ();
-    showNotif('📎 양식 등록',`[${String(stageIdx+1).padStart(2,'0')}] ${STAGES[stageIdx]} 양식이 등록됐어요.`);
+  input.onchange=async e=>{
+    const f=e.target.files[0];
+    if(!f) return;
+    showNotif('⬆ 업로드 중...',`${f.name} 업로드 중이에요.`);
+    try {
+      const path=`stage${stageIdx+1}/${Date.now()}_${f.name}`;
+      const publicUrl = await sb.uploadFile('guide-samples', path, f);
+      sampleFiles[stageIdx]={name:f.name, url:publicUrl};
+      saveState();
+      renderField(); renderHQ();
+      showNotif('📎 양식 등록',`[${String(stageIdx+1).padStart(2,'0')}] ${STAGES[stageIdx]} 양식이 등록됐어요.`);
+    } catch(err){
+      console.log('샘플 업로드 오류:', err);
+      sampleFiles[stageIdx]={name:f.name, url:null};
+      saveState();
+      renderField(); renderHQ();
+      showNotif('📎 양식 등록(로컬)',`파일명만 등록됐어요.`);
+    }
   };
   input.click();
 }
@@ -3498,8 +3515,14 @@ function switchAdminTab(tab){
 function downloadSample(stageIdx){
   const f=sampleFiles[stageIdx];
   if(!f){ showNotif('⚠ 미등록','아직 본사에서 양식을 등록하지 않았어요.'); return; }
-  // 실제 파일 URL이 있으면 window.open(url)으로 대체
-  showNotif('⬇ 다운로드',`${STAGES[stageIdx]} 양식(${f})을 다운로드합니다.`);
+  const url = f.url || (typeof f === 'string' ? null : null);
+  const name = f.name || f;
+  if(url){
+    window.open(url, '_blank');
+    showNotif('⬇ 다운로드',`${name} 파일을 다운로드합니다.`);
+  } else {
+    showNotif('⚠ URL 없음',`${name} 파일 URL이 없어요. 관리자에게 문의해주세요.`);
+  }
 }
 
 function closeAll(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));}
