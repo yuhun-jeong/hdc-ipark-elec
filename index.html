@@ -1795,7 +1795,8 @@ async function openSampleUpload(stageIdx){
     if(!f) return;
     showNotif('⬆ 업로드 중...',`${f.name} 업로드 중이에요.`);
     try {
-      const path=`stage${stageIdx+1}/${Date.now()}_${f.name}`;
+      const safeFileName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path=`stage${stageIdx+1}/${Date.now()}_${safeFileName}`;
       const publicUrl = await sb.uploadFile('guide-samples', path, f);
       sampleFiles[stageIdx]={name:f.name, url:publicUrl};
       saveState();
@@ -1899,7 +1900,8 @@ async function handleCellFile(input){
 
   try {
     // Supabase Storage에 업로드
-    const path=`site${siteId+1}/stage${taskIdx+1}/${Date.now()}_${fileName}`;
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path=`site${siteId+1}/stage${taskIdx+1}/${Date.now()}_${safeFileName}`;
     const publicUrl = await sb.uploadFile('sample-files', path, file);
 
     t.file = fileName;
