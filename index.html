@@ -782,15 +782,30 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <button class="popup-x" onclick="closeAll()">✕</button>
     </div>
     <div class="popup-body">
+      <!-- 상태 변경 버튼 -->
+      <div class="fg-row">
+        <label class="fg-lbl">업무 상태</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="cell-status-btns">
+          <button id="st-btn-pending"  onclick="setCellStatus('pending')"  class="tbtn" style="font-size:11px;padding:5px 10px">— 대기</button>
+          <button id="st-btn-ontrack"  onclick="setCellStatus('ontrack')"  class="tbtn" style="font-size:11px;padding:5px 10px">● 진행중</button>
+          <button id="st-btn-done"     onclick="setCellStatus('done')"     class="tbtn" style="font-size:11px;padding:5px 10px">✓ 완료</button>
+          <button id="st-btn-overdue"  onclick="setCellStatus('overdue')"  class="tbtn" style="font-size:11px;padding:5px 10px">! 지연</button>
+          <button id="st-btn-warning"  onclick="setCellStatus('warning')"  class="tbtn" style="font-size:11px;padding:5px 10px">⚠ 주의</button>
+        </div>
+      </div>
+      <!-- 코멘트 -->
+      <div class="fg-row">
+        <label class="fg-lbl">코멘트</label>
+        <textarea class="fg-textarea" id="cell-memo" placeholder="완료 내용, 특이사항, 조정 사유 등 자유롭게 입력" style="height:70px"></textarea>
+      </div>
+      <!-- 목표일 -->
       <div class="fg-row">
         <label class="fg-lbl">목표일</label>
-        <input type="date" class="fg-input" id="cell-date" style="width:180px" oninput="toggleCellReason()">
+        <input type="date" class="fg-input" id="cell-date" style="width:180px">
       </div>
-      <div class="fg-row" id="cell-reason-row" style="display:none">
-        <label class="fg-lbl">조정 사유 (목표일 변경 시 필수)</label>
-        <textarea class="fg-textarea" id="cell-reason" placeholder="예) 인허가 지연으로 인해 목표일 2주 변경"></textarea>
-      </div>
+      <!-- 결과물 업로드 -->
       <div id="cell-upload-area">
+        <div class="fg-lbl" style="margin-bottom:6px">결과물 업로드</div>
         <div class="upload-zone" id="cell-zone" onclick="document.getElementById('cell-file').click()" style="border:1.5px dashed var(--bd2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;">
           <div style="font-size:20px;margin-bottom:5px">⬆️</div>
           <div style="font-size:12px;color:var(--t2)">결과물 업로드</div>
@@ -805,7 +820,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     </div>
     <div class="popup-foot">
       <button class="tbtn" onclick="closeAll()">닫기</button>
-      <button class="tbtn pri" onclick="saveCellDate()">저장</button>
+      <button class="tbtn pri" onclick="saveCellDate()">💾 저장</button>
     </div>
   </div>
 </div>
@@ -916,6 +931,19 @@ const sb = {
       headers: this.headers
     });
     return res.ok;
+  },
+  // Storage 파일 업로드
+  async uploadFile(bucket, path, file){
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+      },
+      body: file
+    });
+    if(!res.ok) throw new Error('업로드 실패: ' + res.status);
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
   }
 };
 </script>
@@ -1698,8 +1726,8 @@ function openFieldCell(siteId,taskIdx){
   document.getElementById('cell-title').textContent=`[${String(taskIdx+1).padStart(2,'0')}] ${t.stage}`;
   document.getElementById('cell-sub').textContent=`${site.name} · ${stLabel[t.st]||''}`;
   document.getElementById('cell-date').value=t.deadline;
-  document.getElementById('cell-reason').value='';
-  document.getElementById('cell-reason-row').style.display='none';
+  document.getElementById('cell-memo').value=t.memo||'';
+  updateStatusBtns(t.st||'pending');
   const zone=document.getElementById('cell-zone');
   const fileRow=document.getElementById('cell-file-row');
   if(t.file){zone.style.display='none';fileRow.style.display='flex';document.getElementById('cell-file-name').textContent=t.file;}
@@ -1730,8 +1758,8 @@ function openCell(siteId,taskIdx){
   document.getElementById('cell-title').textContent=`[${String(taskIdx+1).padStart(2,'0')}] ${t.stage}`;
   document.getElementById('cell-sub').textContent=`${site.name} · ${stLabel[t.st]||''}`;
   document.getElementById('cell-date').value=t.deadline;
-  document.getElementById('cell-reason').value='';
-  document.getElementById('cell-reason-row').style.display='none';
+  document.getElementById('cell-memo').value=t.memo||'';
+  updateStatusBtns(t.st||'pending');
   const zone=document.getElementById('cell-zone');
   const fileRow=document.getElementById('cell-file-row');
   if(t.file){zone.style.display='none';fileRow.style.display='flex';document.getElementById('cell-file-name').textContent=t.file;}
@@ -1744,17 +1772,43 @@ function toggleCellReason(){
   const changed=document.getElementById('cell-date').value!==focusedCell.origDeadline;
   document.getElementById('cell-reason-row').style.display=changed?'':'none';
 }
-function handleCellFile(input){
+async function handleCellFile(input){
   if(!input.files[0]||!focusedCell) return;
   const {siteId,taskIdx}=focusedCell;
   const t=sites[siteId].tasks[taskIdx];
-  t.file=input.files[0].name;
-  if(t.st!=='done'){t.st='done';t.completed=fmt(today);}
-  document.getElementById('cell-zone').style.display='none';
-  document.getElementById('cell-file-row').style.display='flex';
-  document.getElementById('cell-file-name').textContent=t.file;
-  updateSiteStatus(siteId); renderHQ(); renderField();
-  showNotif('📎 업로드 완료',`${t.stage} 결과물이 등록됐어요.`);
+  const file=input.files[0];
+  const fileName=file.name;
+
+  showNotif('⬆ 업로드 중...',`${fileName} 업로드 중이에요.`);
+
+  try {
+    // Supabase Storage에 업로드
+    const path=`site${siteId+1}/stage${taskIdx+1}/${Date.now()}_${fileName}`;
+    const publicUrl = await sb.uploadFile('sample-files', path, file);
+
+    t.file = fileName;
+    t.fileUrl = publicUrl;
+    if(t.st!=='done'){ t.st='done'; t.completed=fmt(today); }
+    cellCurrentStatus = 'done';
+    updateStatusBtns('done');
+
+    document.getElementById('cell-zone').style.display='none';
+    document.getElementById('cell-file-row').style.display='flex';
+    document.getElementById('cell-file-name').textContent=fileName;
+
+    // Supabase work_status에도 저장
+    saveStatusToSupabase(siteId, taskIdx, 'done', t.memo||'', fileName, t.deadline);
+    updateSiteStatus(siteId); renderHQ(); renderField();
+    showNotif('📎 업로드 완료',`${t.stage} 결과물이 등록됐어요.`);
+  } catch(e) {
+    console.log('파일 업로드 오류:', e);
+    // 로컬에만 저장 (폴백)
+    t.file = fileName;
+    document.getElementById('cell-zone').style.display='none';
+    document.getElementById('cell-file-row').style.display='flex';
+    document.getElementById('cell-file-name').textContent=fileName;
+    showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
+  }
 }
 function removeCellFile(){
   if(!focusedCell) return;
@@ -1764,20 +1818,51 @@ function removeCellFile(){
   document.getElementById('cell-file-row').style.display='none';
   renderHQ(); renderField();
 }
+// 현재 선택된 상태
+let cellCurrentStatus = 'pending';
+
+function setCellStatus(st){
+  cellCurrentStatus = st;
+  updateStatusBtns(st);
+}
+
+function updateStatusBtns(st){
+  cellCurrentStatus = st;
+  const stMap = {
+    pending:  {label:'— 대기',   bg:'var(--surf2)', color:'var(--t2)',  border:'var(--bd2)'},
+    ontrack:  {label:'● 진행중', bg:'var(--bb)',    color:'var(--acc)', border:'var(--acc)'},
+    done:     {label:'✓ 완료',   bg:'var(--gb)',    color:'var(--g)',   border:'var(--g)'},
+    overdue:  {label:'! 지연',   bg:'var(--rb)',    color:'var(--r)',   border:'var(--r)'},
+    warning:  {label:'⚠ 주의',   bg:'var(--yb)',    color:'var(--y)',   border:'var(--y)'},
+  };
+  ['pending','ontrack','done','overdue','warning'].forEach(s=>{
+    const btn = document.getElementById(`st-btn-${s}`);
+    if(!btn) return;
+    const active = s===st;
+    const m = stMap[s];
+    btn.style.background = active ? m.bg : 'transparent';
+    btn.style.color      = active ? m.color : 'var(--t3)';
+    btn.style.border     = `1.5px solid ${active ? m.border : 'var(--bd2)'}`;
+    btn.style.fontWeight = active ? '700' : '400';
+  });
+}
+
 function saveCellDate(){
   if(!focusedCell) return;
-  const {siteId,taskIdx,origDeadline}=focusedCell;
+  const {siteId,taskIdx}=focusedCell;
   const t=sites[siteId].tasks[taskIdx];
   const newDate=document.getElementById('cell-date').value;
-  const reason=document.getElementById('cell-reason').value.trim();
-  if(newDate!==origDeadline){
-    if(!reason){ showNotif('⚠ 입력 오류','목표일을 변경하려면 조정 사유를 입력해주세요.'); return; }
-    if(!t.scheduleLog) t.scheduleLog=[];
-    t.scheduleLog.push({date:fmt(today), from:origDeadline, to:newDate, reason, by:currentUser?currentUser.name:'-'});
-  }
+  const newMemo=document.getElementById('cell-memo')?.value||'';
+  const newSt=cellCurrentStatus||t.st||'pending';
+  if(!newDate){ showNotif('⚠ 입력 오류','목표일을 선택해주세요.'); return; }
   t.deadline=newDate;
+  t.memo=newMemo;
+  t.st=newSt;
+  if(newSt==='done' && !t.completed) t.completed=fmt(today);
+  saveState();
+  saveStatusToSupabase(siteId, taskIdx, newSt, newMemo, t.file||null, newDate);
   updateSiteStatus(siteId); renderHQ(); renderField(); closeAll();
-  showNotif('📅 일정 저장','목표일이 업데이트됐어요.');
+  showNotif('💾 저장 완료','공정 상태가 업데이트됐어요.');
 }
 
 function updateSiteStatus(siteId){
