@@ -1529,7 +1529,7 @@ const stageGuides = STAGES.map(()=>[]);
 const STORAGE_KEY='dxtElecStateV6';
 const DATA_VERSION='v6.4'; // 이 값 바꾸면 자동으로 localStorage 초기화
 // Supabase에 공정 상태 저장
-async function saveStatusToSupabase(siteId, stageIdx, status, memo, fileName){
+async function saveStatusToSupabase(siteId, stageIdx, status, memo, fileName, deadline){
   try {
     const site = sites[siteId];
     if(!site) return;
@@ -1548,6 +1548,7 @@ async function saveStatusToSupabase(siteId, stageIdx, status, memo, fileName){
       status: status,
       memo: memo||'',
       file_name: fileName||null,
+      deadline: deadline||null,
       updated_by: currentUser?.id||'',
       updated_at: new Date().toISOString()
     };
@@ -2336,6 +2337,7 @@ async function saveUserEdit(i){
   }
 }
 
+let pendingUserEdits = {};
 let editingUserIdx=null;
 function openUserSites(i){
   editingUserIdx=i;
