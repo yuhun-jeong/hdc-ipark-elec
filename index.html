@@ -1044,9 +1044,11 @@ async function doLogin(){
   rebuildHQThead();
   renderHQ();
   setTimeout(()=>showNotif('👋 로그인 완료',`${user.name}님, 환영합니다.`),300);
-  // Supabase에서 전체 users + 공정 상태 불러오기
+  // Supabase에서 전체 데이터 불러오기
   loadUsersFromSupabase();
+  loadSampleFilesFromSupabase();
   loadStatusFromSupabase();
+  loadGuidelinesFromSupabase();
 }
 
 // Supabase에서 전체 users 불러오기
@@ -1068,6 +1070,21 @@ async function loadUsersFromSupabase(){
       if(currentUser?.role==='ADMIN'||currentUser?.role==='HQ') renderAdmin();
     }, 200);
   } catch(e) { console.log('users 불러오기 실패:', e); }
+}
+
+// Supabase에서 샘플양식 불러오기
+async function loadSampleFilesFromSupabase(){
+  try {
+    const rows = await sb.select('work_stages', '?order=sort_order&sample_url=not.is.null');
+    if(!rows || !rows.length) return;
+    rows.forEach(row => {
+      const idx = (row.sort_order||1) - 1;
+      if(row.sample_url && idx >= 0 && idx < STAGES.length){
+        sampleFiles[idx] = {name: row.sample_name||'파일', url: row.sample_url};
+      }
+    });
+    console.log('샘플양식 로드 완료');
+  } catch(e) { console.log('샘플양식 불러오기 실패:', e); }
 }
 
 // Supabase에서 work_status 불러오기
@@ -1101,6 +1118,80 @@ async function loadStatusFromSupabase(){
       if(currentUser.role==='MANAGER') renderManager();
     }, 500);
   } catch(e) { console.log('공정상태 불러오기 실패:', e); }
+}
+
+// Supabase에서 지침 라이브러리 불러오기
+async function loadGuidelinesFromSupabase(){
+  try {
+    // guidelines 불러오기
+    const gRows = await sb.select('guidelines', '?active=eq.true&order=id');
+    if(gRows && gRows.length){
+      guideLibrary = gRows.map(g=>({
+        id: g.id, name: g.name, type: g.type,
+        url: g.url||'#', desc: g.description||''
+      }));
+      guideIdSeq = Math.max(...guideLibrary.map(g=>g.id)) + 1;
+    }
+    // stage_guidelines 불러오기
+    const sgRows = await sb.select('stage_guidelines', '?order=stage_id');
+    if(sgRows && sgRows.length){
+      // stageGuides 초기화
+      STAGES.forEach((_,i)=>{ stageGuides[i]=[]; });
+      // work_stages sort_order → stage index 매핑
+      const stageIdMap = {};
+      const wsRows = await sb.select('work_stages','?order=sort_order');
+      wsRows.forEach(ws=>{ stageIdMap[ws.id] = ws.sort_order - 1; });
+      sgRows.forEach(sg=>{
+        const stageIdx = stageIdMap[sg.stage_id];
+        if(stageIdx !== undefined && stageIdx >= 0){
+          stageGuides[stageIdx].push(sg.guideline_id);
+        }
+      });
+    }
+    console.log('지침 라이브러리 로드 완료');
+  } catch(e) { console.log('지침 불러오기 실패:', e); }
+}
+
+// 지침 등록 → Supabase 저장
+async function adminAddGuideSupabase(name, type, url, desc){
+  try {
+    const rows = await sb.insert('guidelines', {name, type, url, description:desc, active:true});
+    if(rows && rows[0]) return rows[0].id;
+  } catch(e) { console.log('지침 등록 오류:', e); }
+  return null;
+}
+
+// 공정↔지침 연결 → Supabase 저장
+async function adminLinkGuideSupabase(stageIdx, guidelineId){
+  try {
+    const wsRows = await sb.select('work_stages', `?sort_order=eq.${stageIdx+1}`);
+    if(!wsRows || !wsRows.length) return;
+    const stageId = wsRows[0].id;
+    await sb.insert('stage_guidelines', {stage_id: stageId, guideline_id: guidelineId});
+  } catch(e) { console.log('지침 연결 오류:', e); }
+}
+
+// ══════════════════════════════
+// 4. 현장 관리 DB 연동
+// ══════════════════════════════
+async function adminAddSiteSupabase(site){
+  try {
+    const rows = await sb.insert('sites', {
+      name: site.name, code: site.code||'',
+      mgr: site.mgr, start: site.start, active: true
+    });
+    if(rows && rows[0]) return rows[0].id;
+  } catch(e) { console.log('현장 추가 오류:', e); }
+  return null;
+}
+
+async function adminToggleSiteSupabase(siteId, active){
+  try {
+    const rows = await sb.select('sites', `?name=eq.${encodeURIComponent(sites[siteId].name)}`);
+    if(rows && rows[0]){
+      await sb.update('sites', `?id=eq.${rows[0].id}`, {active});
+    }
+  } catch(e) { console.log('현장 상태 변경 오류:', e); }
 }
 
 function doLogout(){
@@ -1702,6 +1793,8 @@ async function openSampleUpload(stageIdx){
       const publicUrl = await sb.uploadFile('guide-samples', path, f);
       sampleFiles[stageIdx]={name:f.name, url:publicUrl};
       saveState();
+      // DB에 저장
+      await sb.update('work_stages', `?sort_order=eq.${stageIdx+1}`, {sample_url: publicUrl, sample_name: f.name});
       renderField(); renderHQ();
       showNotif('📎 양식 등록',`[${String(stageIdx+1).padStart(2,'0')}] ${STAGES[stageIdx]} 양식이 등록됐어요.`);
     } catch(err){
@@ -2521,39 +2614,63 @@ function renderAdminGuide(){
   }
 }
 
-function adminAddGuide(){
+async function adminAddGuide(){
   const name=document.getElementById('ag-name').value.trim();
   const type=document.getElementById('ag-type').value;
   const desc=document.getElementById('ag-desc').value.trim();
   const url=document.getElementById('ag-url').value.trim()||'#';
   if(!name){ showNotif('⚠ 입력 오류','지침명을 입력해주세요.'); return; }
-  const newId=guideIdSeq++;
-  guideLibrary.push({id:newId, name, type, url, desc});
-  const checkedStages=[...document.querySelectorAll('.ag-stage-chk:checked')].map(el=>parseInt(el.value));
-  checkedStages.forEach(idx=>{ if(!stageGuides[idx].includes(newId)) stageGuides[idx].push(newId); });
-  ['ag-name','ag-desc','ag-url'].forEach(id=>document.getElementById(id).value='');
-  renderAdminGuide();
-  showNotif('📋 지침 등록',`"${name}" 지침이 등록됐어요.${checkedStages.length?` (${checkedStages.length}개 단계 연결됨)`:''}`);
+  try {
+    // Supabase에 저장
+    const rows = await sb.insert('guidelines', {name, type, url, description:desc, active:true});
+    const newId = (rows && rows[0]) ? rows[0].id : guideIdSeq++;
+    guideLibrary.push({id:newId, name, type, url, desc});
+    // 공정단계 연결
+    const checkedStages=[...document.querySelectorAll('.ag-stage-chk:checked')].map(el=>parseInt(el.value));
+    for(const idx of checkedStages){
+      if(!stageGuides[idx].includes(newId)){
+        stageGuides[idx].push(newId);
+        await adminLinkGuideSupabase(idx, newId);
+      }
+    }
+    ['ag-name','ag-desc','ag-url'].forEach(id=>document.getElementById(id).value='');
+    renderAdminGuide();
+    showNotif('📋 지침 등록',`"${name}" 지침이 등록됐어요.${checkedStages.length?` (${checkedStages.length}개 단계 연결됨)`:''}`);
+  } catch(e) {
+    showNotif('⚠ 저장 오류','Supabase 저장 실패.');
+    console.log('지침 등록 오류:', e);
+  }
 }
 
-function adminEditGuideField(i, field, value){
+async function adminEditGuideField(i, field, value){
   const g=guideLibrary[i];
   if(field==='name'){ if(!value.trim()) return; g.name=value.trim(); }
   else if(field==='url'){ g.url=value.trim()||'#'; }
   else if(field==='desc'){ g.desc=value.trim(); }
   else if(field==='type'){ g.type=value; }
+  try {
+    await sb.update('guidelines', `?id=eq.${g.id}`, {
+      name:g.name, url:g.url, description:g.desc, type:g.type
+    });
+  } catch(e) { console.log('지침 수정 오류:', e); }
   renderAdminGuide();
   showNotif('✏️ 지침 수정',`"${g.name}" 정보가 수정됐어요.`);
 }
 
-function adminDelGuide(i){
+async function adminDelGuide(i){
   const g=guideLibrary[i];
   if(!confirm(`"${g.name}" 지침을 삭제할까요?`)) return;
-  // 연결에서도 제거
-  stageGuides.forEach(arr=>{ const idx=arr.indexOf(g.id); if(idx>-1) arr.splice(idx,1); });
-  guideLibrary.splice(i,1);
-  renderAdminGuide();
-  showNotif('🗑️ 지침 삭제',`"${g.name}" 지침이 삭제됐어요.`);
+  try {
+    await sb.delete('stage_guidelines', `?guideline_id=eq.${g.id}`);
+    await sb.delete('guidelines', `?id=eq.${g.id}`);
+    stageGuides.forEach(arr=>{ const idx=arr.indexOf(g.id); if(idx>-1) arr.splice(idx,1); });
+    guideLibrary.splice(i,1);
+    renderAdminGuide();
+    showNotif('🗑️ 지침 삭제',`"${g.name}" 지침이 삭제됐어요.`);
+  } catch(e) {
+    showNotif('⚠ 삭제 오류','Supabase 삭제 실패.');
+    console.log('지침 삭제 오류:', e);
+  }
 }
 
 // 지침 파일(새 버전) 업로드
