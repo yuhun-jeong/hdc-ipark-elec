@@ -953,6 +953,19 @@ const sb = {
   // Storage 공개 URL 반환
   getPublicUrl(bucket, path){
     return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  },
+  // Storage 파일 삭제
+  async deleteFile(bucket, paths){
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prefixes: Array.isArray(paths) ? paths : [paths] })
+    });
+    return res.ok;
   }
 };
 </script>
@@ -1816,11 +1829,23 @@ async function openSampleUpload(stageIdx){
 }
 
 // 샘플 양식 삭제 (본사/관리자만)
-function removeSampleFile(stageIdx){
+async function removeSampleFile(stageIdx){
   if(!currentUser||!(currentUser.role==='HQ'||currentUser.role==='ADMIN')) return;
   if(!confirm(`[${String(stageIdx+1).padStart(2,'0')}] ${STAGES[stageIdx]} 샘플양식을 삭제할까요?`)) return;
+  const f = sampleFiles[stageIdx];
+  // Supabase Storage에서 삭제
+  if(f && f.url){
+    try {
+      const pathMatch = f.url.match(/guide-samples\/(.+)$/);
+      if(pathMatch) await sb.deleteFile('guide-samples', pathMatch[1]);
+    } catch(e){ console.log('Storage 샘플 삭제 오류:', e); }
+  }
+  // work_stages DB에서 sample_url 제거
+  try {
+    await sb.update('work_stages', `?sort_order=eq.${stageIdx+1}`, {sample_url: null, sample_name: null});
+  } catch(e){ console.log('work_stages 샘플 삭제 오류:', e); }
   sampleFiles[stageIdx]=null;
-  renderField(); renderHQ();
+  saveState(); renderField(); renderHQ();
   showNotif('🗑️ 양식 삭제',`[${String(stageIdx+1).padStart(2,'0')}] ${STAGES[stageIdx]} 샘플양식이 삭제됐어요.`);
 }
 
@@ -1928,13 +1953,33 @@ async function handleCellFile(input){
     showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
   }
 }
-function removeCellFile(){
+async function removeCellFile(){
   if(!focusedCell) return;
   const {siteId,taskIdx}=focusedCell;
-  sites[siteId].tasks[taskIdx].file=null;
+  const t=sites[siteId].tasks[taskIdx];
+  // Supabase Storage에서 삭제
+  if(t.fileUrl){
+    try {
+      // URL에서 경로 추출 (storage/v1/object/public/sample-files/ 이후)
+      const pathMatch = t.fileUrl.match(/sample-files\/(.+)$/);
+      if(pathMatch) await sb.deleteFile('sample-files', pathMatch[1]);
+    } catch(e){ console.log('Storage 파일 삭제 오류:', e); }
+  }
+  // work_status에서 file_name 제거
+  try {
+    const stageRows = await sb.select('work_stages', `?sort_order=eq.${taskIdx+1}`);
+    if(stageRows && stageRows.length){
+      await sb.update('work_status',
+        `?site_id=eq.${siteId+1}&stage_id=eq.${stageRows[0].id}`,
+        {file_name: null}
+      );
+    }
+  } catch(e){ console.log('work_status 파일명 삭제 오류:', e); }
+  t.file=null; t.fileUrl=null;
   document.getElementById('cell-zone').style.display='block';
   document.getElementById('cell-file-row').style.display='none';
-  renderHQ(); renderField();
+  saveState(); renderHQ(); renderField();
+  showNotif('🗑️ 파일 삭제','결과물 파일이 삭제됐어요.');
 }
 // 현재 선택된 상태
 let cellCurrentStatus = 'pending';
@@ -2697,12 +2742,20 @@ function openGuideFileUpload(i){
   input.click();
 }
 
-function removeGuideFile(i){
+async function removeGuideFile(i){
   const g=guideLibrary[i];
   if(!confirm(`"${g.name}"의 업로드된 파일을 삭제할까요?`)) return;
-  g.file=null;
-  g.fileUpdatedAt=null;
-  renderAdminGuide();
+  if(g.fileUrl){
+    try {
+      const pathMatch = g.fileUrl.match(/guide-samples\/(.+)$/);
+      if(pathMatch) await sb.deleteFile('guide-samples', pathMatch[1]);
+    } catch(e){ console.log('Storage 지침파일 삭제 오류:', e); }
+  }
+  try {
+    await sb.update('guidelines', `?id=eq.${g.id}`, {url: '#'});
+  } catch(e){ console.log('guidelines 파일 삭제 오류:', e); }
+  g.file=null; g.fileUrl=null; g.fileUpdatedAt=null;
+  saveState(); renderAdminGuide();
   showNotif('🗑️ 파일 삭제',`"${g.name}"의 업로드 파일이 삭제됐어요.`);
 }
 
@@ -2723,11 +2776,25 @@ function renderLinkGuides(){
     }).join('');
 }
 
-function toggleStageGuide(stIdx, gId){
+async function toggleStageGuide(stIdx, gId){
   const arr=stageGuides[stIdx];
   const i=arr.indexOf(gId);
-  if(i>-1){ arr.splice(i,1); showNotif('🔗 연결 해제','지침 연결이 해제됐어요.'); }
-  else{ arr.push(gId); showNotif('🔗 연결 완료','지침이 연결됐어요.'); }
+  try {
+    const wsRows = await sb.select('work_stages', `?sort_order=eq.${stIdx+1}`);
+    const stageId = wsRows && wsRows.length ? wsRows[0].id : null;
+    if(i>-1){
+      arr.splice(i,1);
+      if(stageId) await sb.delete('stage_guidelines', `?stage_id=eq.${stageId}&guideline_id=eq.${gId}`);
+      showNotif('🔗 연결 해제','지침 연결이 해제됐어요.');
+    } else {
+      arr.push(gId);
+      if(stageId) await sb.insert('stage_guidelines', {stage_id: stageId, guideline_id: gId});
+      showNotif('🔗 연결 완료','지침이 연결됐어요.');
+    }
+  } catch(e){
+    console.log('stage_guidelines 연동 오류:', e);
+    if(i>-1) arr.splice(i,1); else arr.push(gId);
+  }
   renderAdminGuide();
 }
 
