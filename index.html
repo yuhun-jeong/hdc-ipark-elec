@@ -515,9 +515,17 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 <!-- ════ /현장소장 뷰 ════ -->
 
 <div class="view" id="view-field">
-<div class="page">
+<div class="page" style="padding-top:0;overflow:hidden;display:flex;flex-direction:column;">
 
-  <div class="field-header" style="margin-bottom:14px;flex-shrink:0;">
+  <!-- 현장 담당자 서브탭 -->
+  <div style="display:flex;gap:4px;background:var(--surf2);border-radius:0;padding:8px 20px 0;flex-shrink:0;border-bottom:1px solid var(--bd);">
+    <button class="vtab active" id="ftab-status" onclick="switchFieldTab('status')">📋 공정 현황</button>
+    <button class="vtab" id="ftab-map" onclick="switchFieldTab('map')">🗺️ 전공종 프로세스맵</button>
+  </div>
+
+  <!-- 공정 현황 패널 -->
+  <div id="fpanel-status" style="flex:1;display:flex;flex-direction:column;min-height:0;padding:16px 0 0;">
+  <div class="field-header" style="margin-bottom:14px;flex-shrink:0;margin:0 0 14px;">
     <div class="field-site-sel">
       <label>담당 현장</label>
       <select class="site-sel" id="field-sel" onchange="renderField()"></select>
@@ -555,6 +563,20 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <tbody id="field-tbody"></tbody>
         <tfoot><tr id="field-foot-row"><td class="td-fix-foot">단계별 완료</td></tr></tfoot>
       </table>
+    </div>
+  </div>
+
+  </div><!-- /fpanel-status -->
+
+  <!-- 전공종 프로세스맵 패널 -->
+  <div id="fpanel-map" style="display:none;flex:1;overflow:auto;padding:16px 20px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+      <div id="field-mgr-site-name" style="font-size:16px;font-weight:800;color:var(--t1)">-</div>
+      <div id="field-mgr-dmonth-badge" style="font-size:13px;font-weight:800;padding:4px 14px;border-radius:20px;background:rgba(79,110,247,.12);color:var(--acc);">D+1</div>
+      <div id="field-disc-cards" style="display:flex;gap:8px;overflow-x:auto;flex:1;"></div>
+    </div>
+    <div style="overflow-x:auto;overflow-y:auto;border:1px solid var(--bd);border-radius:10px;">
+      <table id="field-process-table" style="border-collapse:collapse;width:100%;"></table>
     </div>
   </div>
 
@@ -2080,12 +2102,23 @@ function updateStatusBtns(st){
 
 function saveCellDate(){
   if(!focusedCell) return;
-  const {siteId,taskIdx}=focusedCell;
+  const {siteId,taskIdx,origDeadline}=focusedCell;
   const t=sites[siteId].tasks[taskIdx];
   const newDate=document.getElementById('cell-date').value;
   const newMemo=document.getElementById('cell-memo')?.value||'';
   const newSt=cellCurrentStatus||t.st||'pending';
   if(!newDate){ showNotif('⚠ 입력 오류','목표일을 선택해주세요.'); return; }
+  // 날짜 변경 이력 기록
+  if(origDeadline && newDate !== origDeadline){
+    if(!t.scheduleLog) t.scheduleLog=[];
+    t.scheduleLog.push({
+      date: fmt(today),
+      from: origDeadline,
+      to: newDate,
+      reason: newMemo||'사유 미입력',
+      by: currentUser?.name||'-'
+    });
+  }
   t.deadline=newDate;
   t.memo=newMemo;
   t.st=newSt;
@@ -3855,6 +3888,186 @@ function toggleFieldStageMgr(){
     </label>`;
   }).join('');
   panel.style.display = 'block';
+}
+
+function switchFieldTab(tab){
+  ['status','map'].forEach(t=>{
+    document.getElementById(`ftab-${t}`)?.classList.toggle('active', t===tab);
+    const p = document.getElementById(`fpanel-${t}`);
+    if(p) p.style.display = t===tab ? (t==='status'?'flex':'block') : 'none';
+  });
+  if(tab==='map') renderFieldProcessMap();
+}
+
+function renderFieldProcessMap(){
+  const siteId = parseInt(document.getElementById('field-sel')?.value ?? 0);
+  const site = sites[siteId];
+  if(!site) return;
+
+  document.getElementById('field-mgr-site-name').textContent = site.name;
+
+  const startVal = site.start;
+  const todayVal = fmt(today);
+  const sDate = new Date(startVal), tDate = new Date(todayVal);
+  const curDm = Math.max(-3, Math.min(37, Math.floor((tDate - sDate)/(1000*60*60*24*30)) + 1));
+  document.getElementById('field-mgr-dmonth-badge').textContent =
+    curDm<=0?`D${curDm}`:curDm<=34?`D+${curDm}`:`준공+${curDm-34}`;
+
+  // 공종 카드
+  const cards = document.getElementById('field-disc-cards');
+  const cardList = [{key:null, name:'전체', color:'#6366f1'}, ...DISCIPLINES];
+  cards.innerHTML = cardList.map(disc=>{
+    const allTasks = disc.key===null
+      ? DISCIPLINES.flatMap(d=>d.categories.flatMap(c=>c.tasks))
+      : disc.categories.flatMap(c=>c.tasks);
+    const total = allTasks.length;
+    const done  = allTasks.filter(t=>t.dm < curDm).length;
+    const pct   = Math.round(done/Math.max(total,1)*100);
+    const col   = disc.color || '#6366f1';
+    const filterVal = disc.key===null ? 'null' : disc.key;
+    return `<div onclick="setFieldDiscFilter('${filterVal}')"
+      style="flex-shrink:0;min-width:110px;background:var(--surf);border:1.5px solid var(--bd);
+             border-radius:10px;padding:10px 12px;cursor:pointer;border-top:3px solid ${col};">
+      <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:6px">${disc.name||'전체'}</div>
+      <div style="height:4px;background:var(--bd2);border-radius:3px;margin-bottom:5px;overflow:hidden">
+        <div style="height:4px;border-radius:3px;background:${col};width:${pct}%"></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--t2)">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  renderFieldMap(curDm, null);
+}
+
+let fieldDiscFilter = null;
+function setFieldDiscFilter(key){
+  fieldDiscFilter = (key==='null'||key===null) ? null : key;
+  const siteId = parseInt(document.getElementById('field-sel')?.value ?? 0);
+  const site = sites[siteId];
+  if(!site) return;
+  const startVal = site.start;
+  const sDate = new Date(startVal), tDate = new Date(fmt(today));
+  const curDm = Math.max(-3, Math.min(37, Math.floor((tDate - sDate)/(1000*60*60*24*30)) + 1));
+  renderFieldMap(curDm, fieldDiscFilter);
+}
+
+function renderFieldMap(curDm, filterKey){
+  const siteId = parseInt(document.getElementById('field-sel')?.value ?? 0);
+  const site = sites[siteId];
+  const tbl = document.getElementById('field-process-table');
+
+  const visibleDiscs = filterKey
+    ? DISCIPLINES.filter(d=>d.key===filterKey)
+    : DISCIPLINES;
+
+  const ALL_DMS = [-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
+    17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37];
+  function dmLabel(dm){
+    if(dm<0) return 'D'+dm;
+    if(dm===0) return 'D-day';
+    if(dm<=34) return 'D+'+dm;
+    return '준공+'+(dm-34);
+  }
+
+  function getElecTaskSt(taskName){
+    if(!site) return null;
+    const si = STAGES.findIndex(s=>
+      s===taskName ||
+      s.replace(/\s/g,'').includes(taskName.replace(/\s/g,'')) ||
+      taskName.replace(/\s/g,'').includes(s.replace(/\s/g,''))
+    );
+    return si>=0 ? site.tasks[si] : null;
+  }
+
+  let html = '<thead><tr>';
+  html += `<th colspan="2" style="position:sticky;left:0;z-index:4;background:var(--surf2);
+    border:2px solid var(--bd2);padding:7px 12px;font-size:11px;font-weight:700;
+    color:var(--t2);min-width:150px;white-space:nowrap">공종 / 업무구분</th>`;
+  ALL_DMS.forEach(dm=>{
+    const isCur=dm===curDm, isNear=dm===curDm-1||dm===curDm+1;
+    html+=`<th style="padding:6px 4px;text-align:center;font-size:${isCur?12:10}px;
+      font-weight:${isCur?800:600};min-width:${isCur?100:75}px;
+      background:${isCur?'var(--acc)':isNear?'rgba(79,110,247,.06)':'var(--surf2)'};
+      color:${isCur?'#fff':isNear?'var(--acc)':'var(--t2)'};
+      border:${isCur?'2px solid var(--acc)':'1px solid var(--bd2)'};white-space:nowrap">
+      ${dmLabel(dm)}${isCur?'<br><span style="font-size:9px;opacity:.8">현재</span>':''}
+    </th>`;
+  });
+  html+='</tr></thead><tbody>';
+
+  visibleDiscs.forEach((disc,di)=>{
+    disc.categories.forEach((cat,ci)=>{
+      const isFirstCat=ci===0, isLastCat=ci===disc.categories.length-1;
+      html+='<tr>';
+      if(isFirstCat){
+        html+=`<td rowspan="${disc.categories.length}"
+          style="position:sticky;left:0;z-index:2;background:var(--surf2);
+          border-left:4px solid ${disc.color};border-right:1px solid var(--bd2);
+          border-top:2px solid var(--bd2);border-bottom:2px solid var(--bd2);
+          font-size:12px;font-weight:800;color:var(--t1);text-align:center;
+          vertical-align:middle;padding:0 6px;min-width:46px">${disc.name}</td>`;
+      }
+      const borderB=isLastCat?'2px solid var(--bd2)':'1px solid var(--bd)';
+      html+=`<td style="position:sticky;left:46px;z-index:2;background:var(--surf2);
+        border-right:2px solid var(--bd2);
+        border-top:${isFirstCat?'2px solid var(--bd2)':'1px solid var(--bd)'};
+        border-bottom:${borderB};font-size:11px;font-weight:600;color:var(--t2);
+        padding:5px 8px;white-space:nowrap;min-width:68px">${cat.name}</td>`;
+
+      ALL_DMS.forEach(dm=>{
+        const isCur=dm===curDm, isNear=dm===curDm-1||dm===curDm+1;
+        const tasksHere=cat.tasks.filter(t=>t.dm===dm);
+        const borderT=isFirstCat?'2px solid var(--bd2)':'1px solid var(--bd)';
+        const borderLR=isCur?'2px solid var(--acc)':'1px solid var(--bd)';
+        const cellBg=isCur?'rgba(79,110,247,.05)':isNear?'rgba(79,110,247,.02)':'transparent';
+
+        if(!tasksHere.length){
+          html+=`<td style="border-top:${borderT};border-bottom:${borderB};
+            border-left:${borderLR};border-right:${borderLR};
+            background:${cellBg};min-width:${isCur?100:75}px"></td>`;
+          return;
+        }
+        html+=`<td style="border-top:${borderT};border-bottom:${borderB};
+          border-left:${borderLR};border-right:${borderLR};
+          background:${cellBg};padding:3px 2px;vertical-align:top;
+          min-width:${isCur?100:75}px">`;
+
+        tasksHere.forEach(task=>{
+          let st='pending', badgeTxt='', fileHtml='';
+          if(disc.key==='elec'){
+            const siteTask=getElecTaskSt(task.name);
+            if(siteTask){
+              st=siteTask.st;
+              if(st==='pending'&&dm<curDm) st='overdue';
+              if(st==='pending'&&dm===curDm) st='ontrack';
+              if(st==='done') badgeTxt='<span class="badge done" style="font-size:9px">✓ 완료</span>';
+              else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:9px">● 진행중</span>';
+              else if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:9px">! 지연</span>';
+              else if(st==='warning') badgeTxt='<span class="badge warning" style="font-size:9px">⚠ 주의</span>';
+              if(siteTask.file) fileHtml='<span class="ftag yes" style="font-size:9px">📎</span>';
+            } else {
+              st=dm<curDm?'overdue':dm===curDm?'ontrack':'pending';
+              if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:9px">! 지연</span>';
+              else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:9px">● 진행중</span>';
+            }
+          } else {
+            st=dm<curDm?'overdue':dm===curDm?'ontrack':'pending';
+            if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:9px">! 지연</span>';
+            else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:9px">● 진행중</span>';
+          }
+          const bgSt={done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
+          html+=`<div style="background:${bgSt};border-radius:5px;padding:3px 5px;margin-bottom:2px;">
+            <div style="font-size:10px;font-weight:700;color:var(--t1);line-height:1.3;word-break:keep-all">${task.name}</div>
+            <div style="display:flex;gap:2px;flex-wrap:wrap">${badgeTxt}${fileHtml}</div>
+          </div>`;
+        });
+        html+='</td>';
+      });
+      html+='</tr>';
+    });
+  });
+  html+='</tbody>';
+  tbl.innerHTML=html;
 }
 
 function closeAll(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));}
