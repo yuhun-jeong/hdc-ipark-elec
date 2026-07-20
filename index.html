@@ -536,6 +536,18 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     </div>
   </div>
 
+  <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:6px;flex-shrink:0;" id="field-stage-mgr-wrap">
+    <button class="tbtn" id="field-stage-mgr-btn" onclick="toggleFieldStageMgr()" style="display:none">
+      ⚙️ 공정 표시/숨김
+    </button>
+  </div>
+  <div id="field-stage-mgr-panel" style="display:none;background:var(--surf);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:10px;flex-shrink:0;">
+    <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px">
+      ⚙️ 공정 표시/숨김 설정 — 체크 해제하면 이 현장에서 숨겨집니다
+    </div>
+    <div id="field-stage-mgr-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto;"></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--t3)">※ 변경사항은 즉시 저장되며 본사 담당자 화면에도 반영됩니다.</div>
+  </div>
   <div class="tbl-outer">
     <div class="tbl-scroll" id="field-tbl-scroll">
       <table id="field-table">
@@ -1067,6 +1079,7 @@ async function doLogin(){
   loadSampleFilesFromSupabase();
   loadStatusFromSupabase();
   loadGuidelinesFromSupabase();
+  loadSiteStagesFromSupabase();
 }
 
 // Supabase에서 전체 users 불러오기
@@ -1088,6 +1101,23 @@ async function loadUsersFromSupabase(){
       if(currentUser?.role==='ADMIN'||currentUser?.role==='HQ') renderAdmin();
     }, 200);
   } catch(e) { console.log('users 불러오기 실패:', e); }
+}
+
+// Supabase에서 현장별 공정 활성화 설정 불러오기
+async function loadSiteStagesFromSupabase(){
+  try {
+    const rows = await sb.select('site_stages', '?order=site_id');
+    if(!rows || !rows.length) return;
+    rows.forEach(row => {
+      const siteIdx = row.site_id - 1;
+      const stageIdx = row.stage_sort_order - 1;
+      if(sites[siteIdx] && stageIdx >= 0 && stageIdx < STAGES.length){
+        if(!sites[siteIdx].stageActive) sites[siteIdx].stageActive = STAGES.map(()=>true);
+        sites[siteIdx].stageActive[stageIdx] = row.is_active;
+      }
+    });
+    console.log('site_stages 로드 완료');
+  } catch(e) { console.log('site_stages 불러오기 실패:', e); }
 }
 
 // Supabase에서 샘플양식 불러오기
@@ -1210,6 +1240,38 @@ async function adminToggleSiteSupabase(siteId, active){
       await sb.update('sites', `?id=eq.${rows[0].id}`, {active});
     }
   } catch(e) { console.log('현장 상태 변경 오류:', e); }
+}
+
+// 현장별 공정 활성화 설정 저장
+async function saveSiteStageToSupabase(siteId, stageIdx, isActive){
+  try {
+    const existing = await sb.select('site_stages',
+      `?site_id=eq.${siteId+1}&stage_sort_order=eq.${stageIdx+1}`);
+    if(existing && existing.length > 0){
+      await sb.update('site_stages',
+        `?site_id=eq.${siteId+1}&stage_sort_order=eq.${stageIdx+1}`,
+        {is_active: isActive});
+    } else {
+      await sb.insert('site_stages', {
+        site_id: siteId+1,
+        stage_sort_order: stageIdx+1,
+        is_active: isActive
+      });
+    }
+  } catch(e){ console.log('site_stages 저장 오류:', e); }
+}
+
+// 현장 담당자 공정 토글 (숨기기/표시)
+async function toggleSiteStage(siteId, stageIdx){
+  if(!sites[siteId].stageActive) sites[siteId].stageActive = STAGES.map(()=>true);
+  const cur = sites[siteId].stageActive[stageIdx];
+  sites[siteId].stageActive[stageIdx] = !cur;
+  await saveSiteStageToSupabase(siteId, stageIdx, !cur);
+  saveState();
+  renderField();
+  renderHQ();
+  showNotif(!cur ? '✅ 공정 표시' : '🙈 공정 숨김',
+    `${STAGES[stageIdx]} 공정이 ${!cur ? '표시' : '숨김'} 처리됐어요.`);
 }
 
 function doLogout(){
@@ -1393,7 +1455,7 @@ function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 function fmtDisp(s){ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 let sites = [
-  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-01', status:'green',
+  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-01', status:'green', stageActive:STAGES.map(()=>true),
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1401,7 +1463,7 @@ let sites = [
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
       st:i<8?'done':i===8?'ontrack':'pending', memo:'', file:i<8?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
-  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-01', status:'red',
+  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-01', status:'red', stageActive:STAGES.map(()=>true),
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1409,14 +1471,14 @@ let sites = [
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
       st:i<4?'done':i===4?'overdue':'pending', memo:'', file:i<4?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
-  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green',
+  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', stageActive:STAGES.map(()=>true),
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
       const dl=fmt(addDays(new Date('2026-10-01'),mon*30));
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null, st:'pending', memo:'', file:null }; }) },
-  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow',
+  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow', stageActive:STAGES.map(()=>true),
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1444,8 +1506,7 @@ function renderHQ(){
         <div class="site-name" style="color:#6366f1">기준 양식 (현장 참조용)</div>
         <div class="site-meta">클릭하여 양식 업로드</div>
       </div></div></td>`;
-  STAGES.forEach((_,i)=>{
-    if(stageActive[i]===false) return;
+  hqSortedIdx.forEach((i)=>{
     const f=sampleFiles[i];
     html+=`<td class="td-st sample"><div class="cell">
       ${f
@@ -1463,8 +1524,12 @@ function renderHQ(){
         <div><div class="site-name">${site.name}</div>
           <div class="site-meta">${site.mgr} · 착공 ${site.start}</div>
         </div></div></td>`;
-    site.tasks.forEach((t,i)=>{
-      if(stageActive[i]===false) return;
+    hqSortedIdx.forEach((i)=>{
+      if(site.stageActive && site.stageActive[i]===false){
+        html+=`<td class="td-st pending"><div class="cell"><span class="badge pending" style="font-size:9px">—</span></div></td>`;
+        return;
+      }
+      const t=site.tasks[i];
       const dl=dLeft(t.deadline);
       let badgeTxt;
       if(t.st==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
@@ -1488,12 +1553,11 @@ function renderHQ(){
   tbody.innerHTML=html;
 
   let footHtml='<td class="td-fix-foot">단계별 완료</td>';
-  for(let i=0;i<STAGES.length;i++){
-    if(stageActive[i]===false) continue;
+  hqSortedIdx.forEach(i=>{
     const cnt=sites.filter(s=>s.tasks[i].st==='done').length;
     const full=cnt===sites.length;
     footHtml+=`<td><span style="color:${full?'var(--g)':'var(--t3)'}">${cnt}/${sites.length}</span></td>`;
-  }
+  });
   foot.innerHTML=footHtml;
 
   document.getElementById('cnt-all').textContent=sites.length;
@@ -1650,40 +1714,42 @@ function renderField(){
   document.getElementById('f-pct').textContent=pct+'%';
   document.getElementById('f-bar').style.width=pct+'%';
 
+  // 공정 관리 버튼 (현장 담당자/관리자만)
+  const mgrBtn = document.getElementById('field-stage-mgr-btn');
+  if(mgrBtn) mgrBtn.style.display = (currentUser&&(currentUser.role==='SITE'||currentUser.role==='ADMIN')) ? '' : 'none';
+
   const isHQ = currentUser&&(currentUser.role==='HQ'||currentUser.role==='ADMIN');
 
-  // ── thead (D월 순서, 단일행)
+  // ── thead (deadline 순서 정렬)
   const fCatColors={'현장관리':'#06b6d4','공사관리':'#10b981','SHOP·도면관리':'#8b5cf6','대관업무':'#3b82f6','원가관리':'#f59e0b','품질':'#a855f7'};
+  const sortedIdx = getSortedStageIndices(site);
   let thHtml='<tr><th class="th-fix"><div class="th-site-inner">구분</div></th>';
-  let fPrevDm='';
-  STAGES.forEach((s,i)=>{
-    if(stageActive[i]===false) return;
-    const dm=STAGE_DMONTH?.[i]||'';
+  let fPrevDeadline='';
+  sortedIdx.forEach((i,seq)=>{
+    const s=STAGES[i];
+    const dm=site.tasks[i]?.deadline||STAGE_DMONTH?.[i]||'';
     const col=fCatColors[STAGE_CAT[i]]||'#666';
-    const dmChanged=dm!==fPrevDm;
-    const bl=dmChanged?'border-left:2px solid var(--bd2)!important':'';
-    if(dmChanged) fPrevDm=dm;
-    // 자연스러운 줄바꿈: 띄어쓰기/콤마 기준으로 10자 내외에서 줄바꿈
-function wrapText(str, maxLen=10){
-  if(str.length<=maxLen) return str;
-  // 콤마, 띄어쓰기 기준으로 줄바꿈 포인트 찾기
-  let result='', line='';
-  const parts = str.split(/([\s,·]+)/);
-  for(let p of parts){
-    if((line+p).length > maxLen && line.length>0){
-      result += line.trimEnd()+'<br>';
-      line=p.trimStart();
-    } else {
-      line+=p;
+    const dlChanged=dm!==fPrevDeadline;
+    const bl=dlChanged?'border-left:2px solid var(--bd2)!important':'';
+    if(dlChanged) fPrevDeadline=dm;
+    function wrapText(str, maxLen=10){
+      if(str.length<=maxLen) return str;
+      let result='', line='';
+      const parts = str.split(/([\s,·]+)/);
+      for(let p of parts){
+        if((line+p).length > maxLen && line.length>0){
+          result += line.trimEnd()+'<br>';
+          line=p.trimStart();
+        } else { line+=p; }
+      }
+      result+=line;
+      return result;
     }
-  }
-  result+=line;
-  return result;
-}
-const short=wrapText(s, 10);
+    const short=wrapText(s, 10);
+    const dlDisp = dm ? fmtDisp(dm) : '';
     thHtml+=`<th style="${bl};border-top:3px solid ${col}"><div class="th-stage-inner">
       <div class="th-step" style="color:${col};font-weight:800;font-size:8px">${STAGE_CAT[i]}</div>
-      <div class="th-step" style="color:#6366f1;font-weight:700;font-size:8px">${dm}</div>
+      <div class="th-step" style="color:#6366f1;font-weight:700;font-size:8px">${dlDisp}</div>
       <div class="th-step">${String(i+1).padStart(2,'0')}</div>
       <div class="th-name">${short}</div>
     </div></th>`;
@@ -1694,7 +1760,7 @@ const short=wrapText(s, 10);
   // ── tbody
   let tbHtml='';
 
-  // 1행: 샘플 양식 (본사 업로드)
+  // 1행: 샘플 양식 (deadline 순 정렬)
   tbHtml+=`<tr class="tr-sample" data-status="sample">
     <td class="td-fix"><div class="td-fix-inner">
       <div class="dot p"></div>
@@ -1704,7 +1770,7 @@ const short=wrapText(s, 10);
         <div class="site-meta">본사 제공 양식</div>
       </div>
     </div></td>`;
-  STAGES.forEach((s,i)=>{
+  sortedIdx.forEach((i)=>{
     const f=sampleFiles[i];
     tbHtml+=`<td class="td-st sample">
       <div class="cell">
@@ -1725,7 +1791,7 @@ const short=wrapText(s, 10);
         <div class="site-meta">${isHQ?'지침 연결: 관리자 탭에서 설정':'클릭하여 지침 열람'}</div>
       </div>
     </div></td>`;
-  STAGES.forEach((s,i)=>{
+  sortedIdx.forEach((i)=>{
     const linked=stageGuides[i]?stageGuides[i].map(id=>guideLibrary.find(g=>g.id===id)).filter(Boolean):[];
     if(isHQ){
       // 본사/관리자: 연결된 지침 수 표시 (관리는 관리자 탭에서)
@@ -1756,7 +1822,8 @@ const short=wrapText(s, 10);
         <div class="site-meta">${site.mgr} · 착공 ${site.start}</div>
       </div>
     </div></td>`;
-  site.tasks.forEach((t,i)=>{
+  sortedIdx.forEach((i)=>{
+    const t=site.tasks[i];
     const dl=dLeft(t.deadline);
     let badgeTxt;
     if(t.st==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
@@ -1780,10 +1847,10 @@ const short=wrapText(s, 10);
   // ── tfoot
   const ftEl=document.getElementById('field-foot-row');
   let ftHtml='<td class="td-fix-foot">단계별 완료</td>';
-  for(let i=0;i<STAGES.length;i++){
+  sortedIdx.forEach(i=>{
     const cnt=site.tasks[i].st==='done'?1:0;
     ftHtml+=`<td><span style="color:${cnt?'var(--g)':'var(--t3)'}">${cnt?'✓':'—'}</span></td>`;
-  }
+  });
   ftEl.innerHTML=ftHtml;
 
   // 드래그 스크롤 (현장 테이블)
@@ -2564,36 +2631,32 @@ function adminAddStage(){
 function rebuildHQThead(){
   const catColors2={'현장관리':'#06b6d4','공사관리':'#10b981','SHOP·도면관리':'#8b5cf6','대관업무':'#3b82f6','원가관리':'#f59e0b','품질':'#a855f7'};
   // D월 순서 단일 헤더행 (카테고리 색상 상단 테두리로 구분)
+  const hqSortedIdx = getHQSortedIndices();
   let html='<tr><th class="th-fix"><div class="th-site-inner">현장 정보</div></th>';
-  let prevDMonth='';
-  STAGES.forEach((s,i)=>{
-    if(stageActive[i]===false) return;
+  let prevDeadline='';
+  const refSite2 = sites.find(s=>s.active!==false);
+  hqSortedIdx.forEach((i)=>{
     const color=catColors2[STAGE_CAT[i]]||'#666';
-    // 자연스러운 줄바꿈: 띄어쓰기/콤마 기준으로 10자 내외에서 줄바꿈
-function wrapText(str, maxLen=10){
-  if(str.length<=maxLen) return str;
-  // 콤마, 띄어쓰기 기준으로 줄바꿈 포인트 찾기
-  let result='', line='';
-  const parts = str.split(/([\s,·]+)/);
-  for(let p of parts){
-    if((line+p).length > maxLen && line.length>0){
-      result += line.trimEnd()+'<br>';
-      line=p.trimStart();
-    } else {
-      line+=p;
+    function wrapText(str, maxLen=10){
+      if(str.length<=maxLen) return str;
+      let result='', line='';
+      const parts = str.split(/([\s,·]+)/);
+      for(let p of parts){
+        if((line+p).length > maxLen && line.length>0){
+          result += line.trimEnd()+'<br>'; line=p.trimStart();
+        } else { line+=p; }
+      }
+      result+=line; return result;
     }
-  }
-  result+=line;
-  return result;
-}
-const short=wrapText(s, 10);
-    const dm=typeof STAGE_DMONTH!=='undefined'?STAGE_DMONTH[i]:'';
-    const dmChanged=dm!==prevDMonth;
-    const borderLeft=dmChanged?'border-left:2px solid var(--bd2)!important':'';
-    if(dmChanged) prevDMonth=dm;
+    const short=wrapText(STAGES[i], 10);
+    const dl = refSite2 ? refSite2.tasks[i]?.deadline : STAGE_DMONTH?.[i]||'';
+    const dlDisp = dl ? fmtDisp(dl) : '';
+    const dlChanged=dl!==prevDeadline;
+    const borderLeft=dlChanged?'border-left:2px solid var(--bd2)!important':'';
+    if(dlChanged) prevDeadline=dl;
     html+=`<th style="${borderLeft};border-top:3px solid ${color}"><div class="th-stage-inner">
       <div class="th-step" style="color:${color};font-weight:800;font-size:8px">${STAGE_CAT[i]}</div>
-      <div class="th-step" style="color:#6366f1;font-weight:700;font-size:8px">${dm}</div>
+      <div class="th-step" style="color:#6366f1;font-weight:700;font-size:8px">${dlDisp}</div>
       <div class="th-step">${String(i+1).padStart(2,'0')}</div>
       <div class="th-name">${short}</div>
     </div></th>`;
@@ -3716,6 +3779,81 @@ function downloadSample(stageIdx){
   } else {
     showNotif('⚠ URL 없음',`${name} 파일 URL이 없어요. 관리자에게 문의해주세요.`);
   }
+}
+
+// 현장 기준 정렬된 공정 인덱스 반환
+// deadline 기준으로 정렬, 숨긴 공정 제외
+function getSortedStageIndices(site){
+  const indices = [];
+  STAGES.forEach((s, i) => {
+    if(stageActive[i] === false) return;
+    if(site && site.stageActive && site.stageActive[i] === false) return;
+    indices.push(i);
+  });
+  // deadline 기준 정렬 (같은 deadline이면 원래 순서 유지)
+  indices.sort((a, b) => {
+    const da = site ? site.tasks[a]?.deadline : null;
+    const db = site ? site.tasks[b]?.deadline : null;
+    if(!da && !db) return a - b;
+    if(!da) return 1;
+    if(!db) return -1;
+    const diff = da.localeCompare(db);
+    return diff !== 0 ? diff : a - b;
+  });
+  return indices;
+}
+
+// HQ 화면에서는 전 현장 공통 기준으로 정렬
+// (각 현장별로 첫번째 현장 deadline 기준)
+function getHQSortedIndices(){
+  const indices = [];
+  STAGES.forEach((s, i) => {
+    if(stageActive[i] === false) return;
+    indices.push(i);
+  });
+  // 첫번째 활성 현장의 deadline 기준 정렬
+  const refSite = sites.find(s => s.active !== false);
+  if(refSite){
+    indices.sort((a, b) => {
+      const da = refSite.tasks[a]?.deadline;
+      const db = refSite.tasks[b]?.deadline;
+      if(!da && !db) return a - b;
+      if(!da) return 1;
+      if(!db) return -1;
+      const diff = da.localeCompare(db);
+      return diff !== 0 ? diff : a - b;
+    });
+  }
+  return indices;
+}
+
+function toggleFieldStageMgr(){
+  const panel = document.getElementById('field-stage-mgr-panel');
+  const isOpen = panel.style.display !== 'none';
+  if(isOpen){
+    panel.style.display='none';
+    return;
+  }
+  // 현재 현장
+  const siteId = parseInt(document.getElementById('field-sel').value);
+  const site = sites[siteId];
+  if(!site) return;
+  if(!site.stageActive) site.stageActive = STAGES.map(()=>true);
+
+  const catColors = {'현장관리':'#06b6d4','공사관리':'#10b981','SHOP·도면관리':'#8b5cf6','대관업무':'#3b82f6','원가관리':'#f59e0b','품질':'#a855f7'};
+  const list = document.getElementById('field-stage-mgr-list');
+  list.innerHTML = STAGES.map((s,i)=>{
+    if(stageActive[i]===false) return ''; // 전체 비활성은 표시 안함
+    const active = site.stageActive[i] !== false;
+    const col = catColors[STAGE_CAT[i]]||'#666';
+    return `<label style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;
+      border:1px solid ${active?col+'40':'var(--bd)'};background:${active?col+'10':'var(--surf2)'};
+      cursor:pointer;font-size:11px;color:${active?col:'var(--t3)'};font-weight:${active?'700':'400'}">
+      <input type="checkbox" ${active?'checked':''} onchange="toggleSiteStage(${siteId},${i})">
+      <span>${String(i+1).padStart(2,'0')}. ${s.length>15?s.substring(0,15)+'…':s}</span>
+    </label>`;
+  }).join('');
+  panel.style.display = 'block';
 }
 
 function closeAll(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));}
