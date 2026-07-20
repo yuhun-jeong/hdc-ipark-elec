@@ -3567,6 +3567,7 @@ function renderMgrProcessMap(curDm){
   const siteId = currentUser?.siteIds?.[0] ?? 0;
   const site   = sites[siteId];
   const siteTasks = site?.tasks || [];
+  const startVal = site?.start || new Date().toISOString().split('T')[0];
 
   const visibleDiscs = mgrFilterDisc
     ? DISCIPLINES.filter(d=>d.key===mgrFilterDisc)
@@ -3687,34 +3688,32 @@ function renderMgrProcessMap(curDm){
             // 전기: 실제 site.tasks 상태 매핑
             const siteTask = getElecTaskStatus(task.name);
             if(siteTask){
-              // pending인데 D월 지났으면 지연으로 보정
+              // deadline → D월 변환해서 현재 셀 dm과 비교
+              const deadlineDm = Math.round((new Date(siteTask.deadline) - new Date(startVal))/(1000*60*60*24*30));
+              // 실제 deadline D월이 현재 셀과 다르면 이 셀에 표시 안함
+              if(deadlineDm !== dm) return;
               st = siteTask.st;
-              if(st==='pending' && dm < curDm) st='overdue';
-              if(st==='pending' && dm === curDm) st='ontrack';
+              if(st==='pending' && deadlineDm < curDm) st='overdue';
+              if(st==='pending' && deadlineDm === curDm) st='ontrack';
               const dl = dLeft(siteTask.deadline);
-              if(st==='done')       badgeTxt='<span class="badge done">✓ 완료</span>';
+              if(st==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
               else if(st==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
               else if(st==='warning') badgeTxt='<span class="badge warning">⚠ 주의</span>';
               else if(st==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
-              else badgeTxt='';  // 예정: 배지 없음
-              // 날짜 (모든 상태 표시)
+              else badgeTxt='';
               if(st!=='done'&&st!=='pending'&&st!==''){
                 const dc=dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
                 ddayHtml=`<div class="dday ${dc}">${dl<0?'D+'+Math.abs(dl):'D-'+dl}</div>`;
               }
               ddayHtml+=`<div class="date-lbl">${fmtDisp(siteTask.deadline)}</div>`;
-              // 결과물
-              if(siteTask.file){
-                fileHtml=`<span class="ftag yes">📎 제출</span>`;
-              } else if(st!=='pending'){
-                fileHtml=`<span class="ftag no">미제출</span>`;
-              }
+              if(siteTask.file) fileHtml=`<span class="ftag yes">📎 제출</span>`;
+              else if(st!=='pending') fileHtml=`<span class="ftag no">미제출</span>`;
             } else {
-              // 매핑 안된 전기 업무 → D월 기준
+              // 매핑 안된 전기 업무 → 원래 dm 기준
+              if(task.dm !== dm) return;
               st = dm < curDm ? 'overdue' : dm === curDm ? 'ontrack' : 'pending';
               badgeTxt = st==='overdue'?'<span class="badge overdue">! 지연</span>':
-                         st==='ontrack'?'<span class="badge ontrack">● 진행중</span>':
-                         '';  // 예정: 배지 없음
+                         st==='ontrack'?'<span class="badge ontrack">● 진행중</span>':'';
             }
           } else {
             // 기계 등: D월 기준 자동 계산
