@@ -1495,6 +1495,7 @@ let focusedCell=null;
 function renderHQ(){
   saveState();
   rebuildHQThead();
+  const hqSortedIdx = getHQSortedIndices();
   const tbody=document.getElementById('main-tbody');
   const foot=document.getElementById('foot-row');
 
