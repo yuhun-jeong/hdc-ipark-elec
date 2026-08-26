@@ -358,6 +358,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <div class="vr"></div>
   <div class="view-tabs" id="view-tabs-wrap">
     <button class="vtab active" id="vtab-hq" onclick="switchView('hq')">🏢 본사 대시보드</button>
+    <button class="vtab" id="vtab-hq-arch" onclick="switchView('hq-arch')" style="display:none">🏗️ 본사대시보드(건축)</button>
     <button class="vtab" id="vtab-manager" onclick="switchView('manager')" style="display:none">📊 공종별 프로세스맵</button>
     <button class="vtab" id="vtab-field" onclick="switchView('field')">👷 현장 담당자</button>
     <button class="vtab" id="vtab-admin" onclick="switchView('admin')" style="display:none">⚙️ 관리자</button>
@@ -475,6 +476,61 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 </div>
 </div>
 
+<!-- 본사대시보드(건축) -->
+<div class="view" id="view-hq-arch">
+<div class="page">
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-ico" style="background:rgba(49,94,251,.1)">🏢</div><div><div class="kpi-num" id="ha-kpi-sites">-</div><div class="kpi-lbl">관리 현장</div></div></div>
+    <div class="kpi-vr"></div>
+    <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">🟢</div><div><div class="kpi-num" style="color:var(--g)" id="ha-kpi-normal">-</div><div class="kpi-lbl">정상</div></div></div>
+    <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">🟡</div><div><div class="kpi-num" style="color:var(--y)" id="ha-kpi-warning">-</div><div class="kpi-lbl">주의</div></div></div>
+    <div class="kpi"><div class="kpi-ico" style="background:var(--rm)">🔴</div><div><div class="kpi-num" style="color:var(--r)" id="ha-kpi-overdue">-</div><div class="kpi-lbl">지연</div></div></div>
+    <div class="kpi-vr"></div>
+    <div class="kpi"><div class="kpi-ico" style="background:rgba(245,158,11,.1)">📋</div><div><div class="kpi-num" style="color:var(--y)" id="ha-kpi-week">-</div><div class="kpi-lbl">이번주 마감</div></div></div>
+    <div class="kpi"><div class="kpi-ico" style="background:rgba(239,68,68,.08)">📁</div><div><div class="kpi-num" style="color:var(--r)" id="ha-kpi-nofile">-</div><div class="kpi-lbl">미제출</div></div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;margin-bottom:14px">
+    <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
+      <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:800;color:var(--t1)">현장별 건축 공정 비교</div>
+      <div style="overflow:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--surf2)">
+            <th style="padding:9px 12px;text-align:left;font-size:11px;color:var(--t3)">현장</th>
+            <th style="padding:9px 12px;font-size:11px;color:var(--t3)">진행률</th>
+            <th style="padding:9px 12px;font-size:11px;color:var(--t3)">상태</th>
+            <th style="padding:9px 12px;font-size:11px;color:var(--t3)">산출물</th>
+            <th style="padding:9px 12px;font-size:11px;color:var(--t3)">확인</th>
+          </tr></thead>
+          <tbody id="ha-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden;margin-bottom:12px">
+        <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>⚠ 지연 현황</span><span id="ha-delay-count" style="color:var(--r);font-size:12px;font-weight:800"></span></div>
+        <div style="padding:0 16px;max-height:230px;overflow:auto" id="ha-delay-list"></div>
+      </div>
+      <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
+        <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>📅 임박 업무(2주 이내)</span><span id="ha-next-count" style="color:var(--y);font-size:12px;font-weight:800"></span></div>
+        <div style="padding:0 16px;max-height:230px;overflow:auto" id="ha-next-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
+    <div style="padding:13px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:14px;font-weight:800;color:var(--t1)">🗺️ 건축 타임라인</span>
+      <select id="ha-timeline-sel" class="site-sel" onchange="hqArchSiteId=parseInt(this.value);renderHqArchTimeline()" style="min-width:170px"></select>
+      <span id="ha-timeline-dmonth" style="font-size:12px;font-weight:800;padding:4px 12px;border-radius:20px;background:rgba(49,94,251,.12);color:var(--acc)"></span>
+    </div>
+    <div style="overflow-x:auto;overflow-y:auto;max-height:60vh">
+      <table id="ha-timeline-table" style="border-collapse:collapse;width:100%"></table>
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- 현장 담당자 -->
 <!-- ════ 현장소장 뷰 ════ -->
 <div class="view" id="view-manager">
@@ -578,6 +634,29 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   </div>
 
   </div><!-- /fpanel-status -->
+
+  <!-- 공종별(건축 등) 업무 현황 패널 — 업무 단위 리스트/아코디언 -->
+  <div id="fpanel-status-disc" style="display:none;flex:1;flex-direction:column;min-height:0;padding:16px 0 0;">
+    <div class="field-header" style="margin-bottom:14px;flex-shrink:0;margin:0 20px 14px;">
+      <div class="field-site-sel">
+        <label>담당 현장</label>
+        <select class="site-sel" id="fd-field-sel" onchange="onFdSiteSelChange()"></select>
+      </div>
+      <div class="field-stats">
+        <div class="fstat"><div class="fstat-num" id="fd-total">—</div><div class="fstat-lbl">전체 업무</div></div>
+        <div class="fstat"><div class="fstat-num" style="color:var(--g)" id="fd-done">—</div><div class="fstat-lbl">완료</div></div>
+        <div class="fstat"><div class="fstat-num" style="color:var(--r)" id="fd-urgent">—</div><div class="fstat-lbl">긴급/지연</div></div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--t2);">
+          <span>진행률</span><span id="fd-pct" style="color:var(--acc)">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="fd-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="fd-body" style="flex:1;overflow:auto;padding:0 20px 20px;"></div>
+  </div><!-- /fpanel-status-disc -->
 
   <!-- 전공종 프로세스맵 패널 -->
   <div id="fpanel-map" style="display:none;flex:1;overflow:auto;padding:16px 20px;">
@@ -900,6 +979,17 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   </div>
 </div>
 
+<!-- 본사 대시보드: 현장×공종 드릴다운 팝업 -->
+<div class="overlay" id="ov-dischq" onclick="if(event.target===this)closeAll()">
+  <div class="popup" style="width:640px;max-height:85vh;display:flex;flex-direction:column">
+    <div class="popup-head">
+      <div><div class="popup-title" id="dischq-title" style="font-size:16px">—</div><div class="popup-sub" id="dischq-sub">—</div></div>
+      <button class="popup-x" onclick="closeAll()">✕</button>
+    </div>
+    <div class="popup-body" id="dischq-body" style="overflow-y:auto"></div>
+  </div>
+</div>
+
 <!-- 현장·마일스톤 설정 팝업 -->
 <div class="overlay" id="ov-sitesetting" onclick="if(event.target===this)closeAll()">
   <div class="popup" style="width:640px;max-height:88vh;overflow:auto">
@@ -1087,6 +1177,7 @@ const USERS = [
   { id:'6666', pw:'6666', name:'6단지 전기담당',   role:'SITE',    siteIds:[1], discipline:'전기', active:true },
   { id:'3333', pw:'3333', name:'3단지 전기담당',   role:'SITE',    siteIds:[2], discipline:'전기', active:true },
   { id:'4444', pw:'4444', name:'4단지 전기담당',   role:'SITE',    siteIds:[3], discipline:'전기', active:true },
+  { id:'7777', pw:'7777', name:'5단지 건축담당',   role:'SITE',    siteIds:[0], discipline:'건축', active:true },
 ];
 let currentUser = null;
 
@@ -1136,12 +1227,14 @@ async function doLogin(){
   if(user.role==='MANAGER'){
     document.getElementById('vtab-manager').style.display='';
     document.getElementById('vtab-hq').style.display='none';
+    document.getElementById('vtab-hq-arch').style.display='none';
     document.getElementById('vtab-field').style.display='none';
     document.getElementById('vtab-admin').style.display='none';
     document.getElementById('topbtn-addsite').style.display='none';
     setTimeout(()=>{ switchView('manager'); renderManager(); }, 100);
   } else if(user.role==='SITE'){
     document.getElementById('vtab-hq').style.display='none';
+    document.getElementById('vtab-hq-arch').style.display='none';
     document.getElementById('vtab-admin').style.display='none';
     document.getElementById('topbtn-addsite').style.display='none';
     switchView('field');
@@ -1149,6 +1242,7 @@ async function doLogin(){
   } else if(user.role==='ADMIN'){
     // 관리자: 모든 탭 표시
     document.getElementById('vtab-hq').style.display='';
+    document.getElementById('vtab-hq-arch').style.display='';
     document.getElementById('vtab-manager').style.display='';
     document.getElementById('vtab-field').style.display='';
     document.getElementById('vtab-admin').style.display='';
@@ -1156,8 +1250,9 @@ async function doLogin(){
     switchView('hq');
     refreshFieldSel(null);
   } else {
-    // HQ: 본사+현장소장+현장담당 탭
+    // HQ: 본사+본사(건축)+현장소장+현장담당 탭
     document.getElementById('vtab-hq').style.display='';
+    document.getElementById('vtab-hq-arch').style.display='';
     document.getElementById('vtab-manager').style.display='';
     document.getElementById('vtab-field').style.display='';
     document.getElementById('vtab-admin').style.display='none';
@@ -1549,7 +1644,7 @@ function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 function fmtDisp(s){ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 let sites = [
-  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-01', status:'green', duration:34, basement:2, floors:35, stageActive:STAGES.map(()=>true),
+  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-01', status:'green', duration:34, basement:2, floors:35, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1557,7 +1652,7 @@ let sites = [
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
       st:i<8?'done':i===8?'ontrack':'pending', memo:'', file:i<8?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
-  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-01', status:'red', duration:38, basement:3, floors:42, stageActive:STAGES.map(()=>true),
+  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-01', status:'red', duration:38, basement:3, floors:42, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1565,14 +1660,14 @@ let sites = [
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
       st:i<4?'done':i===4?'overdue':'pending', memo:'', file:i<4?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
-  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, stageActive:STAGES.map(()=>true),
+  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
       const dl=fmt(addDays(new Date('2026-10-01'),mon*30));
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null, st:'pending', memo:'', file:null }; }) },
-  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, stageActive:STAGES.map(()=>true),
+  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1777,18 +1872,32 @@ function loadState(){
 }
 loadState();
 
+// 전기 STAGES 기반 화면인지, 다른 공종(건축 등) 업무 리스트 화면인지 판단
+function isDiscFieldMode(){
+  return !!(currentUser && currentUser.role==='SITE' && currentUser.discipline && currentUser.discipline!=='전기');
+}
+
 function refreshFieldSel(forceSiteId){
   const sel=document.getElementById('field-sel');
+  const fdSel=document.getElementById('fd-field-sel');
+  let optsHtml;
   if(currentUser&&currentUser.role==='SITE'){
     const mySites=(currentUser.siteIds||[]).map(id=>sites[id]).filter(Boolean);
-    sel.innerHTML=mySites.length
+    optsHtml=mySites.length
       ? mySites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')
       : `<option value="">배속된 현장 없음</option>`;
   } else {
-    sel.innerHTML=sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-    if(forceSiteId!==null&&forceSiteId!==undefined) sel.value=forceSiteId;
+    optsHtml=sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   }
-  renderField();
+  sel.innerHTML=optsHtml;
+  fdSel.innerHTML=optsHtml;
+  if(forceSiteId!==null&&forceSiteId!==undefined){ sel.value=forceSiteId; fdSel.value=forceSiteId; }
+  switchFieldTab(isDiscFieldMode()?'status':'status');
+}
+
+function onFdSiteSelChange(){
+  document.getElementById('field-sel').value = document.getElementById('fd-field-sel').value;
+  renderFieldDiscipline();
 }
 
 function renderField(){
@@ -1969,6 +2078,372 @@ function renderField(){
   }
 }
 
+// ════════════════════════════
+//  공종별(건축 등) 업무 현황 — 업무 단위 상태 추적
+//  전기(STAGES)와 별개로, DISCIPLINES 업무를 taskKey 기준 site.taskStatus에 저장
+// ════════════════════════════
+
+// 계획 dm(착공 대비 개월수) → 목표일 (STAGES의 mon*30 계산과 동일한 방식)
+function discTaskDeadline(site, task){
+  return fmt(addDays(new Date(site.start), task.dm*30));
+}
+
+// 사이트별 업무 실제 진행상태 조회(없으면 기본값 생성)
+function getDiscTaskStatus(site, key, task){
+  if(!site.taskStatus) site.taskStatus = {};
+  if(!site.taskStatus[key]){
+    site.taskStatus[key] = { st:'pending', memo:'', file:null, fileUrl:null, deadline:discTaskDeadline(site, task), completed:null };
+  }
+  return site.taskStatus[key];
+}
+
+// 현재 로그인한 공종 담당자의 discipline명(예:'건축') → DISCIPLINES 항목 찾기
+function findDiscByName(schedule, name){
+  return schedule.disciplines.find(d=>d.name===name);
+}
+
+// 특정 현장의 특정 공종 업무 전체를 {cat,ci,ti,task,key,status} 리스트로 평탄화
+function collectDiscTasks(site, disc){
+  const items=[];
+  disc.categories.forEach((cat,ci)=>{
+    cat.tasks.forEach((task,ti)=>{
+      const key = taskKey(disc.key, ci, ti);
+      items.push({ cat, ci, ti, task, key, status:getDiscTaskStatus(site, key, task) });
+    });
+  });
+  return items;
+}
+
+// 업무 리스트를 카테고리별 아코디언 HTML로 렌더링 (현장 화면·본사 드릴다운 공용)
+function buildDiscAccordionHtml(site, disc, items, fromPopup){
+  const byCat = {};
+  items.forEach(it=>{ (byCat[it.ci] = byCat[it.ci] || {cat:it.cat, ci:it.ci, items:[]}).items.push(it); });
+  const stBadge = {
+    done:'<span class="badge done">✓ 완료</span>',
+    ontrack:'<span class="badge ontrack">● 진행중</span>',
+    warning:'<span class="badge warning">⚠ 주의</span>',
+    overdue:'<span class="badge overdue">! 지연</span>',
+    pending:'<span class="badge pending">— 대기</span>',
+  };
+  return Object.values(byCat).map(({cat,ci,items})=>{
+    const doneCnt = items.filter(it=>it.status.st==='done').length;
+    const overdueCnt = items.filter(it=>it.status.st==='overdue').length;
+    const rows = items.map(it=>{
+      const dl = dLeft(it.status.deadline);
+      let ddayHtml='';
+      if(it.status.st!=='done' && it.status.st!=='pending'){
+        const dc = dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
+        ddayHtml = `<div class="dday ${dc}" style="display:inline-block;margin-right:6px">${dl<0?`D+${Math.abs(dl)}`:`D-${dl}`}</div>`;
+      }
+      const fileTag = it.status.file ? `<span class="ftag yes">📎 제출</span>` : '';
+      const clickJs = fromPopup ? `closeAll();openDiscCell(${site.id},'${disc.key}',${it.ci},${it.ti})` : `openDiscCell(${site.id},'${disc.key}',${it.ci},${it.ti})`;
+      return `<div onclick="${clickJs}"
+          style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bd);cursor:pointer">
+        <div style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.task.name}</div>
+        <div style="font-size:11px;color:var(--t3);width:56px;flex-shrink:0;font-family:var(--mono)">${fmtDMonth(it.task.dm)}</div>
+        <div style="width:120px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;gap:6px">${ddayHtml}${stBadge[it.status.st]||stBadge.pending}</div>
+        <div style="width:56px;flex-shrink:0;text-align:right">${fileTag}</div>
+      </div>`;
+    }).join('');
+    return `<div class="fd-cat-block" style="border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;overflow:hidden">
+      <div onclick="toggleFdCat(this)" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surf2);cursor:pointer;user-select:none">
+        <div style="font-size:13px;font-weight:800;color:var(--t1)">${cat.name}${cat.sub?` <span style="font-weight:600;color:var(--t3);font-size:11px">· ${cat.sub}</span>`:''}</div>
+        <div style="font-size:11px;font-weight:700;color:${overdueCnt?'var(--r)':'var(--t3)'}">${doneCnt}/${items.length} 완료${overdueCnt?` · 지연 ${overdueCnt}`:''}</div>
+      </div>
+      <div class="fd-cat-body">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleFdCat(headEl){
+  const body = headEl.nextElementSibling;
+  if(!body) return;
+  body.style.display = body.style.display==='none' ? '' : 'none';
+}
+
+// 현장 담당자 화면(공종별) 렌더링
+function renderFieldDiscipline(){
+  saveState();
+  const siteId = parseInt(document.getElementById('fd-field-sel').value);
+  const site = sites[siteId];
+  const body = document.getElementById('fd-body');
+  if(!site || !currentUser || !currentUser.discipline){
+    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3)">배속된 현장이 없습니다. 관리자에게 문의해주세요.</div>';
+    ['fd-total','fd-done','fd-urgent'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('fd-pct').textContent='0%'; document.getElementById('fd-bar').style.width='0%';
+    return;
+  }
+  const schedule = getSiteSchedule(siteId);
+  const disc = findDiscByName(schedule, currentUser.discipline);
+  if(!disc){
+    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3)">해당 공종 데이터가 없습니다.</div>';
+    return;
+  }
+  const items = collectDiscTasks(site, disc);
+  const total = items.length;
+  const done = items.filter(it=>it.status.st==='done').length;
+  const urgent = items.filter(it=>it.status.st==='overdue' || (it.status.st!=='done'&&it.status.st!=='pending'&&dLeft(it.status.deadline)<=3&&dLeft(it.status.deadline)>=0)).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('fd-total').textContent=total;
+  document.getElementById('fd-done').textContent=done;
+  document.getElementById('fd-urgent').textContent=urgent;
+  document.getElementById('fd-pct').textContent=pct+'%';
+  document.getElementById('fd-bar').style.width=pct+'%';
+  body.innerHTML = buildDiscAccordionHtml(site, disc, items);
+}
+
+// 공종 업무 셀 클릭 → 기존 ov-cell 팝업 재사용 (STAGES와 별개 경로: focusedCell.mode='disc')
+function openDiscCell(siteId, discKey, catIdx, taskIdx){
+  const schedule = getSiteSchedule(siteId);
+  const disc = schedule.disciplines.find(d=>d.key===discKey);
+  if(!disc) return;
+  const cat = disc.categories[catIdx];
+  const task = cat.tasks[taskIdx];
+  const site = sites[siteId];
+  const key = taskKey(discKey, catIdx, taskIdx);
+  const t = getDiscTaskStatus(site, key, task);
+  focusedCell = { mode:'disc', siteId, key, discKey, catIdx, taskIdx, origDeadline:t.deadline };
+  const stLabel={done:'✓ 완료',ontrack:'● 진행중',warning:'⚠ 주의',overdue:'! 지연',pending:'— 대기'};
+  document.getElementById('cell-title').textContent = task.name;
+  document.getElementById('cell-sub').textContent = `${site.name} · ${disc.name}/${cat.name} · ${stLabel[t.st]||''}`;
+  document.getElementById('cell-date').value = t.deadline;
+  document.getElementById('cell-memo').value = t.memo||'';
+  updateStatusBtns(t.st||'pending');
+  const zone=document.getElementById('cell-zone');
+  const fileRow=document.getElementById('cell-file-row');
+  if(t.file){ zone.style.display='none'; fileRow.style.display='flex'; document.getElementById('cell-file-name').textContent=t.file; }
+  else{ zone.style.display='block'; fileRow.style.display='none'; }
+  document.getElementById('ov-cell').classList.add('open');
+}
+
+// 공종 업무 상태 → Supabase 동기화 (disc_task_status 테이블이 없으면 조용히 실패, 로컬엔 항상 저장됨)
+async function saveDiscStatusToSupabase(siteId, key, status, memo, fileName, deadline){
+  try {
+    const data = {
+      site_id: siteId+1, task_key:key, status, memo:memo||'',
+      file_name: fileName||null, deadline: deadline||null,
+      updated_by: currentUser?.id||'', updated_at: new Date().toISOString()
+    };
+    const existing = await sb.select('disc_task_status', `?site_id=eq.${siteId+1}&task_key=eq.${key}`);
+    if(existing && existing.length>0) await sb.update('disc_task_status', `?site_id=eq.${siteId+1}&task_key=eq.${key}`, data);
+    else await sb.insert('disc_task_status', data);
+  } catch(e){ console.log('disc_task_status 동기화 실패 (테이블 없으면 로컬에만 저장됩니다):', e); }
+}
+
+// ── 본사 대시보드: 현장별 공종 요약(완료/지연) — 2단계 드릴다운의 1단계
+function computeDiscSummary(site, discName){
+  const schedule = getSiteSchedule(site.id);
+  const disc = findDiscByName(schedule, discName);
+  if(!disc) return null;
+  const items = collectDiscTasks(site, disc);
+  const total = items.length;
+  const done = items.filter(it=>it.status.st==='done').length;
+  const overdue = items.filter(it=>it.status.st==='overdue').length;
+  const warning = items.filter(it=>it.status.st==='warning').length;
+  return { disc, items, total, done, overdue, warning };
+}
+
+function discSummaryChipHtml(site, discName){
+  const sum = computeDiscSummary(site, discName);
+  if(!sum || !sum.total) return '';
+  const color = sum.overdue>0?'var(--r)':sum.warning>0?'var(--y)':'var(--g)';
+  const bg    = sum.overdue>0?'var(--rb)':sum.warning>0?'var(--yb)':'var(--gb)';
+  return `<span onclick="event.stopPropagation();openDiscHQPopup(${site.id},'${discName}')"
+      style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:800;background:${bg};color:${color};cursor:pointer;white-space:nowrap">
+      🏗️ ${discName} ${sum.done}/${sum.total}${sum.overdue?` · 지연 ${sum.overdue}`:''}
+    </span>`;
+}
+
+// 2단계: 공종 요약칩 클릭 → 그 현장의 해당 공종 업무를 카테고리별로 드릴다운
+function openDiscHQPopup(siteId, discName){
+  const site = sites[siteId];
+  const sum = computeDiscSummary(site, discName);
+  if(!sum) return;
+  document.getElementById('dischq-title').textContent = `${site.name} · ${discName}`;
+  document.getElementById('dischq-sub').textContent = `전체 ${sum.total} · 완료 ${sum.done} · 지연 ${sum.overdue}`;
+  document.getElementById('dischq-body').innerHTML = buildDiscAccordionHtml(site, sum.disc, sum.items, true);
+  document.getElementById('ov-dischq').classList.add('open');
+}
+
+// ════════════════════════════
+//  본사대시보드(건축) 전용 화면 — 기존 본사 대시보드(전기)와 완전히 분리된 별도 탭
+//  KPI 요약 + 현장별 비교표 + 지연/임박 리스트 + 선택 현장 타임라인(Gantt)
+// ════════════════════════════
+let hqArchSiteId = 0;
+
+function renderHqArch(){
+  if(!sites.find(s=>s.id===hqArchSiteId)) hqArchSiteId = sites[0]?.id ?? 0;
+  renderHqArchKpi();
+  renderHqArchTable();
+  renderHqArchLists();
+  const sel = document.getElementById('ha-timeline-sel');
+  sel.innerHTML = sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  sel.value = hqArchSiteId;
+  renderHqArchTimeline();
+}
+
+function renderHqArchKpi(){
+  let normalSites=0, warningSites=0, overdueSites=0, noFile=0, dueWeek=0;
+  sites.forEach(site=>{
+    const sum = computeDiscSummary(site,'건축');
+    if(!sum) return;
+    if(sum.overdue>0) overdueSites++;
+    else if(sum.warning>0) warningSites++;
+    else normalSites++;
+    sum.items.forEach(it=>{
+      if(it.status.st!=='done' && !it.status.file) noFile++;
+      const dl = dLeft(it.status.deadline);
+      if(it.status.st!=='done' && dl>=0 && dl<=7) dueWeek++;
+    });
+  });
+  document.getElementById('ha-kpi-sites').textContent = sites.length;
+  document.getElementById('ha-kpi-normal').textContent = normalSites;
+  document.getElementById('ha-kpi-warning').textContent = warningSites;
+  document.getElementById('ha-kpi-overdue').textContent = overdueSites;
+  document.getElementById('ha-kpi-week').textContent = dueWeek;
+  document.getElementById('ha-kpi-nofile').textContent = noFile;
+}
+
+function renderHqArchTable(){
+  const tbody = document.getElementById('ha-table-body');
+  tbody.innerHTML = sites.map(site=>{
+    const sum = computeDiscSummary(site,'건축');
+    if(!sum) return '';
+    const pct = sum.total ? Math.round(sum.done/sum.total*100) : 0;
+    const withFile = sum.items.filter(it=>it.status.file).length;
+    const filePct = sum.total ? Math.round(withFile/sum.total*100) : 0;
+    const stColor = sum.overdue>0?'var(--r)':sum.warning>0?'var(--y)':'var(--g)';
+    const stLabel = sum.overdue>0?`지연 ${sum.overdue}건`:sum.warning>0?`주의 ${sum.warning}건`:'정상';
+    return `<tr style="cursor:pointer;border-top:1px solid var(--bd)" onclick="hqArchSiteId=${site.id};document.getElementById('ha-timeline-sel').value=${site.id};renderHqArchTimeline()">
+      <td style="padding:10px 12px;font-weight:800;font-size:13px">${site.name}</td>
+      <td style="padding:10px 12px;text-align:center;font-size:12px">${pct}% <span style="color:var(--t3);font-weight:600">(${sum.done}/${sum.total})</span></td>
+      <td style="padding:10px 12px;text-align:center;font-size:12px;font-weight:800;color:${stColor}">${stLabel}</td>
+      <td style="padding:10px 12px;text-align:center;font-size:12px">${filePct}%</td>
+      <td style="padding:10px 12px;text-align:center"><button class="tbtn" onclick="event.stopPropagation();openDiscHQPopup(${site.id},'건축')" style="height:26px;padding:0 10px;font-size:11px">상세</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHqArchLists(){
+  const delay=[], next=[];
+  sites.forEach(site=>{
+    const sum = computeDiscSummary(site,'건축');
+    if(!sum) return;
+    sum.items.forEach(it=>{
+      if(it.status.st==='overdue') delay.push({site,it});
+      else if(it.status.st!=='done'){
+        const dl=dLeft(it.status.deadline);
+        if(dl>=0 && dl<=14) next.push({site,it,dl});
+      }
+    });
+  });
+  delay.sort((a,b)=>dLeft(a.it.status.deadline)-dLeft(b.it.status.deadline));
+  next.sort((a,b)=>a.dl-b.dl);
+  document.getElementById('ha-delay-count').textContent = delay.length+'건';
+  document.getElementById('ha-next-count').textContent = next.length+'건';
+  document.getElementById('ha-delay-list').innerHTML = delay.length ? delay.slice(0,12).map(({site,it})=>`
+    <div class="delay-item" style="cursor:pointer" onclick="openDiscCell(${site.id},'arch',${it.ci},${it.ti})">
+      <div><div class="delay-site">${it.task.name}</div><div class="delay-task">${site.name} · ${it.cat.name}</div></div>
+      <span class="delay-badge">D+${Math.abs(dLeft(it.status.deadline))}</span>
+    </div>`).join('') : '<div style="padding:20px 0;text-align:center;color:var(--t3);font-size:12px">✅ 지연 업무가 없습니다</div>';
+  document.getElementById('ha-next-list').innerHTML = next.length ? next.slice(0,12).map(({site,it,dl})=>`
+    <div class="delay-item" style="cursor:pointer" onclick="openDiscCell(${site.id},'arch',${it.ci},${it.ti})">
+      <div><div class="delay-site">${it.task.name}</div><div class="delay-task">${site.name} · ${it.cat.name}</div></div>
+      <span class="delay-badge" style="background:var(--ym);color:var(--y)">D-${dl}</span>
+    </div>`).join('') : '<div style="padding:20px 0;text-align:center;color:var(--t3);font-size:12px">임박한 업무가 없습니다</div>';
+}
+
+// 건축 타임라인(Gantt) — 선택된 현장 1곳의 건축 업무를 월별로 표시, 실제 상태(site.taskStatus) 반영
+// 공종별 프로세스맵의 renderMgrProcessMap과 같은 레이아웃 패턴을 재사용하되, 건축 1개 공종·실제 상태 기준으로 단순화
+function renderHqArchTimeline(){
+  const site = sites[hqArchSiteId];
+  const tbl = document.getElementById('ha-timeline-table');
+  if(!site){ tbl.innerHTML=''; return; }
+  const schedule = getSiteSchedule(site.id);
+  const disc = findDiscByName(schedule, '건축');
+  if(!disc){ tbl.innerHTML='<tr><td style="padding:20px;text-align:center;color:var(--t3)">건축 데이터가 없습니다.</td></tr>'; return; }
+
+  const startVal = site.start;
+  const curDm = Math.max(-6, Math.min(37, Math.floor((today - new Date(startVal))/(1000*60*60*24*30)) + 1));
+  document.getElementById('ha-timeline-dmonth').textContent = fmtDMonth(curDm);
+
+  const siteDuration = schedule.duration || MASTER_DURATION;
+  const ALL_DMS = [];
+  for(let i=-6;i<=siteDuration+3;i++) ALL_DMS.push(i);
+  function dmLabel(dm){
+    if(dm<0) return 'D'+dm;
+    if(dm===0) return 'D-day';
+    if(dm<=siteDuration) return 'D+'+dm;
+    return '준공+'+(dm-siteDuration);
+  }
+
+  let html = '<thead><tr>';
+  html += `<th colspan="2" style="position:sticky;left:0;z-index:4;background:var(--surf2);border:2px solid var(--bd2);padding:10px 14px;font-size:13px;font-weight:800;color:var(--t2);min-width:160px;white-space:nowrap">건축 / 업무구분</th>`;
+  ALL_DMS.forEach(dm=>{
+    const isCur = dm===curDm, isNear = dm===curDm-1||dm===curDm+1;
+    html += `<th style="padding:9px 5px;text-align:center;font-size:${isCur?15:13}px;font-weight:${isCur?800:700};min-width:${isCur?130:96}px;
+      background:${isCur?'var(--acc)':isNear?'rgba(49,94,251,.08)':'var(--surf2)'};
+      color:${isCur?'#fff':isNear?'var(--acc)':'var(--t2)'};
+      border:${isCur?'2px solid var(--acc)':'1px solid var(--bd2)'};white-space:nowrap">
+      ${dmLabel(dm)}${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
+    </th>`;
+  });
+  html += '</tr></thead><tbody>';
+  html += buildMilestoneRows(ALL_DMS, schedule.milestones);
+
+  disc.categories.forEach((cat,ci)=>{
+    const isFirstCat = ci===0, isLastCat = ci===disc.categories.length-1;
+    html += '<tr>';
+    if(isFirstCat){
+      html += `<td rowspan="${disc.categories.length}" style="position:sticky;left:0;z-index:2;background:var(--surf2);border-left:4px solid ${disc.color};border-right:1px solid var(--bd2);border-top:2px solid var(--bd2);border-bottom:2px solid var(--bd2);font-size:14px;font-weight:900;color:var(--t1);text-align:center;vertical-align:middle;padding:0 8px;min-width:56px">건축</td>`;
+    }
+    const catBorderB = isLastCat ? '2px solid var(--bd2)' : '1px solid var(--bd)';
+    html += `<td style="position:sticky;left:56px;z-index:2;background:var(--surf2);border-right:2px solid var(--bd2);border-top:${isFirstCat?'2px solid var(--bd2)':'1px solid var(--bd)'};border-bottom:${catBorderB};font-size:13px;font-weight:700;color:var(--t2);padding:8px 12px;white-space:nowrap;min-width:80px">${cat.name}</td>`;
+
+    ALL_DMS.forEach(dm=>{
+      const isCur = dm===curDm, isNear = dm===curDm-1||dm===curDm+1;
+      const tasksHere = cat.tasks.filter(t=>t.dm===dm);
+      const borderT = isFirstCat ? '2px solid var(--bd2)' : '1px solid var(--bd)';
+      const borderB = isLastCat ? '2px solid var(--bd2)' : '1px solid var(--bd)';
+      const borderLR = isCur ? '2px solid var(--acc)' : '1px solid var(--bd)';
+      const cellBg = isCur ? 'rgba(49,94,251,.05)' : isNear ? 'rgba(49,94,251,.02)' : 'transparent';
+
+      if(!tasksHere.length){
+        html += `<td style="border:1px solid var(--bd);border-top:${borderT};border-bottom:${borderB};border-left:${borderLR};border-right:${borderLR};background:${cellBg};min-width:${isCur?130:96}px"></td>`;
+        return;
+      }
+      html += `<td style="border-top:${borderT};border-bottom:${borderB};border-left:${borderLR};border-right:${borderLR};background:${cellBg};padding:5px 4px;vertical-align:top;min-width:${isCur?130:96}px">`;
+      tasksHere.forEach(task=>{
+        const taskIdx = cat.tasks.indexOf(task);
+        const key = taskKey('arch', ci, taskIdx);
+        const t = getDiscTaskStatus(site, key, task);
+        let st = t.st;
+        if(st==='pending' && dLeft(t.deadline)<0) st='overdue';
+        let badgeTxt='', ddayHtml='', fileHtml='';
+        if(st==='done') badgeTxt='<span class="badge done">✓ 완료</span>';
+        else if(st==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
+        else if(st==='warning') badgeTxt='<span class="badge warning">⚠ 주의</span>';
+        else if(st==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
+        if(st!=='done' && st!=='pending'){
+          const dl=dLeft(t.deadline);
+          const dc=dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
+          ddayHtml=`<div class="dday ${dc}">${dl<0?'D+'+Math.abs(dl):'D-'+dl}</div>`;
+        }
+        if(t.file) fileHtml='<span class="ftag yes">📎 제출</span>';
+        const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
+        html += `<div class="task-clickable" onclick="openDiscCell(${site.id},'arch',${ci},${taskIdx})" style="background:${cellBgSt};border-radius:7px;padding:5px 7px;margin-bottom:4px;">
+          <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px;white-space:normal;line-height:1.4;word-break:keep-all">${task.name}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">${badgeTxt}${ddayHtml}${fileHtml}</div>
+        </div>`;
+      });
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
 // 샘플 양식 업로드 (본사/관리자만)
 async function openSampleUpload(stageIdx){
   if(!currentUser||!(currentUser.role==='HQ'||currentUser.role==='ADMIN')) return;
@@ -2087,6 +2562,7 @@ function toggleCellReason(){
 }
 async function handleCellFile(input){
   if(!input.files[0]||!focusedCell) return;
+  if(focusedCell.mode==='disc'){ await handleDiscCellFile(input); return; }
   const {siteId,taskIdx}=focusedCell;
   const t=sites[siteId].tasks[taskIdx];
   const file=input.files[0];
@@ -2124,8 +2600,61 @@ async function handleCellFile(input){
     showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
   }
 }
+// 공종 업무(disc) 파일 업로드/삭제 — STAGES 경로와 분리된 별도 로직
+async function handleDiscCellFile(input){
+  const {siteId,key}=focusedCell;
+  const site=sites[siteId];
+  const t=site.taskStatus[key];
+  const file=input.files[0];
+  const fileName=file.name;
+  showNotif('⬆ 업로드 중...',`${fileName} 업로드 중이에요.`);
+  try {
+    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path=`disc-status/${key}/${Date.now()}_${safeFileName}`;
+    const publicUrl = await sb.uploadFile('sample-files', path, file);
+    t.file = fileName; t.fileUrl = publicUrl;
+    if(t.st!=='done'){ t.st='done'; t.completed=fmt(today); }
+    cellCurrentStatus='done'; updateStatusBtns('done');
+    document.getElementById('cell-zone').style.display='none';
+    document.getElementById('cell-file-row').style.display='flex';
+    document.getElementById('cell-file-name').textContent=fileName;
+    saveState();
+    saveDiscStatusToSupabase(siteId, key, 'done', t.memo||'', fileName, t.deadline);
+    renderFieldDiscipline(); renderHQ();
+    showNotif('📎 업로드 완료',`${document.getElementById('cell-title').textContent} 결과물이 등록됐어요.`);
+  } catch(e){
+    console.log('공종 업무 파일 업로드 오류:', e);
+    t.file = fileName;
+    document.getElementById('cell-zone').style.display='none';
+    document.getElementById('cell-file-row').style.display='flex';
+    document.getElementById('cell-file-name').textContent=fileName;
+    saveState();
+    showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
+  }
+}
+async function removeDiscCellFile(){
+  const {siteId,key}=focusedCell;
+  const site=sites[siteId];
+  const t=site.taskStatus[key];
+  if(!t) return;
+  if(t.fileUrl){
+    try {
+      const pathMatch = t.fileUrl.match(/sample-files\/(.+)$/);
+      if(pathMatch) await sb.deleteFile('sample-files', pathMatch[1]);
+    } catch(e){ console.log('Storage 공종파일 삭제 오류:', e); }
+  }
+  t.file=null; t.fileUrl=null;
+  document.getElementById('cell-zone').style.display='block';
+  document.getElementById('cell-file-row').style.display='none';
+  saveState();
+  saveDiscStatusToSupabase(siteId, key, t.st, t.memo||'', null, t.deadline);
+  renderFieldDiscipline(); renderHQ();
+  showNotif('🗑️ 파일 삭제','결과물 파일이 삭제됐어요.');
+}
+
 async function removeCellFile(){
   if(!focusedCell) return;
+  if(focusedCell.mode==='disc'){ await removeDiscCellFile(); return; }
   const {siteId,taskIdx}=focusedCell;
   const t=sites[siteId].tasks[taskIdx];
   // Supabase Storage에서 삭제
@@ -2181,8 +2710,29 @@ function updateStatusBtns(st){
   });
 }
 
+function saveDiscCellDate(){
+  const {siteId,key,origDeadline}=focusedCell;
+  const site=sites[siteId];
+  const t=site.taskStatus[key];
+  const newDate=document.getElementById('cell-date').value;
+  const newMemo=document.getElementById('cell-memo')?.value||'';
+  const newSt=cellCurrentStatus||t.st||'pending';
+  if(!newDate){ showNotif('⚠ 입력 오류','목표일을 선택해주세요.'); return; }
+  if(origDeadline && newDate !== origDeadline){
+    if(!t.scheduleLog) t.scheduleLog=[];
+    t.scheduleLog.push({ date:fmt(today), from:origDeadline, to:newDate, reason:newMemo||'사유 미입력', by:currentUser?.name||'-' });
+  }
+  t.deadline=newDate; t.memo=newMemo; t.st=newSt;
+  if(newSt==='done' && !t.completed) t.completed=fmt(today);
+  saveState();
+  saveDiscStatusToSupabase(siteId, key, newSt, newMemo, t.file||null, newDate);
+  renderFieldDiscipline(); renderHQ(); closeAll();
+  showNotif('💾 저장 완료','공정 상태가 업데이트됐어요.');
+}
+
 function saveCellDate(){
   if(!focusedCell) return;
+  if(focusedCell.mode==='disc'){ saveDiscCellDate(); return; }
   const {siteId,taskIdx,origDeadline}=focusedCell;
   const t=sites[siteId].tasks[taskIdx];
   const newDate=document.getElementById('cell-date').value;
@@ -2261,25 +2811,26 @@ function addSite(){
   const start=document.getElementById('ns-start').value;
   if(!name||!start){alert('현장명과 착공일을 입력해주세요');return;}
   const sd=new Date(start);
-  const newSite={id:sites.length,name,mgr,start,status:'green',
-    tasks:STAGES.map((s,i)=>{ 
+  const newSite={id:sites.length,name,mgr,start,status:'green', taskStatus:{},
+    tasks:STAGES.map((s,i)=>{
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
       return {stage:s,docs:DOCS[i],cat:STAGE_CAT[i],deadline:fmt(addDays(sd,mon*30)),completed:null,st:'pending',memo:'',file:null};
-    })}; 
+    })};
   sites.push(newSite);
   refreshFieldSel(null); renderHQ(); closeAll();
   showNotif('🏗️ 현장 추가',`${name}이 등록됐어요.`);
 }
 
 function switchView(v){
-  ['hq','manager','field','admin'].forEach(name=>{
+  ['hq','hq-arch','manager','field','admin'].forEach(name=>{
     document.getElementById(`vtab-${name}`)?.classList.toggle('active',v===name);
     document.getElementById(`view-${name}`)?.classList.toggle('active',v===name);
   });
   if(v==='field')   renderField();
   if(v==='admin')   renderAdmin();
   if(v==='manager') renderManager();
+  if(v==='hq-arch') renderHqArch();
 }
 
 // ════════════════════════════
@@ -2602,7 +3153,7 @@ function adminAddSite(){
   const floors=parseInt(document.getElementById('an-floors').value)||MASTER_FLOORS;
   if(!name||!start){showNotif('⚠ 입력 오류','현장명과 착공일은 필수입니다.');return;}
   const sd=new Date(start);
-  const newSite={id:sites.length,name,code,mgr,start,end,status:'green',active:true,
+  const newSite={id:sites.length,name,code,mgr,start,end,status:'green',active:true, taskStatus:{},
     duration,basement,floors,schedule:generateSiteSchedule(duration,basement,floors),
     tasks:STAGES.map((s,i)=>{
       const dm=STAGE_DMONTH[i]||'D+1';
@@ -4580,12 +5131,16 @@ function toggleFieldStageMgr(){
 }
 
 function switchFieldTab(tab){
+  const discMode = isDiscFieldMode();
   ['status','map'].forEach(t=>{
     document.getElementById(`ftab-${t}`)?.classList.toggle('active', t===tab);
-    const p = document.getElementById(`fpanel-${t}`);
-    if(p) p.style.display = t===tab ? (t==='status'?'flex':'block') : 'none';
   });
+  document.getElementById('fpanel-status').style.display = (tab==='status' && !discMode) ? 'flex' : 'none';
+  document.getElementById('fpanel-status-disc').style.display = (tab==='status' && discMode) ? 'flex' : 'none';
+  document.getElementById('fpanel-map').style.display = tab==='map' ? 'block' : 'none';
   if(tab==='map') renderFieldProcessMap();
+  else if(discMode) renderFieldDiscipline();
+  else renderField();
 }
 
 function renderFieldProcessMap(){
