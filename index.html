@@ -1644,7 +1644,7 @@ function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 function fmtDisp(s){ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 let sites = [
-  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-01', status:'green', duration:34, basement:2, floors:35, stageActive:STAGES.map(()=>true), taskStatus:{},
+  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-15', status:'green', duration:34, basement:2, floors:35, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1652,7 +1652,7 @@ let sites = [
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
       st:i<8?'done':i===8?'ontrack':'pending', memo:'', file:i<8?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
-  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-01', status:'red', duration:38, basement:3, floors:42, stageActive:STAGES.map(()=>true), taskStatus:{},
+  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-15', status:'red', duration:34, basement:3, floors:42, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1660,14 +1660,14 @@ let sites = [
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
       st:i<4?'done':i===4?'overdue':'pending', memo:'', file:i<4?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
-  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, stageActive:STAGES.map(()=>true), taskStatus:{},
+  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, stageActive:STAGES.map(()=>true), taskStatus:{}, active:false,
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
       const dl=fmt(addDays(new Date('2026-10-01'),mon*30));
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null, st:'pending', memo:'', file:null }; }) },
-  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, stageActive:STAGES.map(()=>true), taskStatus:{},
+  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, stageActive:STAGES.map(()=>true), taskStatus:{}, active:false,
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
@@ -1687,6 +1687,7 @@ function renderHQ(){
   const hqSortedIdx = getHQSortedIndices();
   const tbody=document.getElementById('main-tbody');
   const foot=document.getElementById('foot-row');
+  const activeSites = sites.filter(s=>s.active!==false); // 착공 전(비활성) 현장은 본사 대시보드에서 숨김
 
   // 샘플행
   let html=`<tr class="tr-sample" data-status="sample">
@@ -1706,7 +1707,7 @@ function renderHQ(){
   });
   html+='</tr>';
 
-  sites.forEach(site=>{
+  activeSites.forEach(site=>{
     const dotCls=site.status==='green'?'g':site.status==='red'?'r':'y';
     html+=`<tr data-status="${site.status}">
       <td class="td-fix"><div class="td-fix-inner">
@@ -1744,16 +1745,16 @@ function renderHQ(){
 
   let footHtml='<td class="td-fix-foot">단계별 완료</td>';
   hqSortedIdx.forEach(i=>{
-    const cnt=sites.filter(s=>s.tasks[i].st==='done').length;
-    const full=cnt===sites.length;
-    footHtml+=`<td><span style="color:${full?'var(--g)':'var(--t3)'}">${cnt}/${sites.length}</span></td>`;
+    const cnt=activeSites.filter(s=>s.tasks[i].st==='done').length;
+    const full=cnt===activeSites.length;
+    footHtml+=`<td><span style="color:${full?'var(--g)':'var(--t3)'}">${cnt}/${activeSites.length}</span></td>`;
   });
   foot.innerHTML=footHtml;
 
-  document.getElementById('cnt-all').textContent=sites.length;
-  document.getElementById('cnt-green').textContent=sites.filter(s=>s.status==='green').length;
-  document.getElementById('cnt-yellow').textContent=sites.filter(s=>s.status==='yellow').length;
-  document.getElementById('cnt-red').textContent=sites.filter(s=>s.status==='red').length;
+  document.getElementById('cnt-all').textContent=activeSites.length;
+  document.getElementById('cnt-green').textContent=activeSites.filter(s=>s.status==='green').length;
+  document.getElementById('cnt-yellow').textContent=activeSites.filter(s=>s.status==='yellow').length;
+  document.getElementById('cnt-red').textContent=activeSites.filter(s=>s.status==='red').length;
 }
 
 // ════════════════════════════
@@ -1800,7 +1801,7 @@ let taskGuides = {}; // taskKey -> {name,url,updatedAt}
 //  실제 서버/DB 연동 전까지 새로고침해도 데이터 유지
 // ════════════════════════════
 const STORAGE_KEY='dxtElecStateV6';
-const DATA_VERSION='v6.5'; // 이 값 바꾸면 자동으로 localStorage 초기화
+const DATA_VERSION='v6.8'; // 이 값 바꾸면 자동으로 localStorage 초기화 (기계 SHOPDRAWING 카테고리 19개 업무 삭제 반영)
 // Supabase에 공정 상태 저장
 async function saveStatusToSupabase(siteId, stageIdx, status, memo, fileName, deadline){
   try {
@@ -2089,12 +2090,15 @@ function discTaskDeadline(site, task){
 }
 
 // 사이트별 업무 실제 진행상태 조회(없으면 기본값 생성)
+// 마감일이 지났는데 완료 처리가 안 된 업무는 자동으로 '지연'으로 승격해서 보여줌(아무도 입력을 안 해도 방치되지 않도록)
 function getDiscTaskStatus(site, key, task){
   if(!site.taskStatus) site.taskStatus = {};
   if(!site.taskStatus[key]){
     site.taskStatus[key] = { st:'pending', memo:'', file:null, fileUrl:null, deadline:discTaskDeadline(site, task), completed:null };
   }
-  return site.taskStatus[key];
+  const t = site.taskStatus[key];
+  if(t.st!=='done' && dLeft(t.deadline)<0) t.st='overdue';
+  return t;
 }
 
 // 현재 로그인한 공종 담당자의 discipline명(예:'건축') → DISCIPLINES 항목 찾기
@@ -2271,20 +2275,25 @@ function openDiscHQPopup(siteId, discName){
 // ════════════════════════════
 let hqArchSiteId = 0;
 
+// 착공 전(비활성) 현장은 본사대시보드(건축)에서도 숨김
+function activeSitesList(){ return sites.filter(s=>s.active!==false); }
+
 function renderHqArch(){
-  if(!sites.find(s=>s.id===hqArchSiteId)) hqArchSiteId = sites[0]?.id ?? 0;
+  const list = activeSitesList();
+  if(!list.find(s=>s.id===hqArchSiteId)) hqArchSiteId = list[0]?.id ?? 0;
   renderHqArchKpi();
   renderHqArchTable();
   renderHqArchLists();
   const sel = document.getElementById('ha-timeline-sel');
-  sel.innerHTML = sites.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  sel.innerHTML = list.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
   sel.value = hqArchSiteId;
   renderHqArchTimeline();
 }
 
 function renderHqArchKpi(){
   let normalSites=0, warningSites=0, overdueSites=0, noFile=0, dueWeek=0;
-  sites.forEach(site=>{
+  const list = activeSitesList();
+  list.forEach(site=>{
     const sum = computeDiscSummary(site,'건축');
     if(!sum) return;
     if(sum.overdue>0) overdueSites++;
@@ -2296,7 +2305,7 @@ function renderHqArchKpi(){
       if(it.status.st!=='done' && dl>=0 && dl<=7) dueWeek++;
     });
   });
-  document.getElementById('ha-kpi-sites').textContent = sites.length;
+  document.getElementById('ha-kpi-sites').textContent = list.length;
   document.getElementById('ha-kpi-normal').textContent = normalSites;
   document.getElementById('ha-kpi-warning').textContent = warningSites;
   document.getElementById('ha-kpi-overdue').textContent = overdueSites;
@@ -2306,7 +2315,7 @@ function renderHqArchKpi(){
 
 function renderHqArchTable(){
   const tbody = document.getElementById('ha-table-body');
-  tbody.innerHTML = sites.map(site=>{
+  tbody.innerHTML = activeSitesList().map(site=>{
     const sum = computeDiscSummary(site,'건축');
     if(!sum) return '';
     const pct = sum.total ? Math.round(sum.done/sum.total*100) : 0;
@@ -2326,7 +2335,7 @@ function renderHqArchTable(){
 
 function renderHqArchLists(){
   const delay=[], next=[];
-  sites.forEach(site=>{
+  activeSitesList().forEach(site=>{
     const sum = computeDiscSummary(site,'건축');
     if(!sum) return;
     sum.items.forEach(it=>{
@@ -3168,7 +3177,7 @@ function adminAddSite(){
 
 function adminToggleSite(i){
   sites[i].active = sites[i].active===false ? true : false;
-  renderAdmin(); renderHQ();
+  renderAdmin(); renderHQ(); renderHqArch();
   showNotif(sites[i].active?'✅ 현장 복구':'🗑️ 현장 비활성화', `${sites[i].name} 상태가 변경됐어요.`);
 }
 
@@ -4159,25 +4168,6 @@ const DISCIPLINES = [
         {name:'[자재 & 외주] 준공정산에 따른 변경 발주', dm:34},
       ]},
       { name:'SHOPDRAWING', sub:'도면관리', tasks:[
-        {name:'사업승인도서,착공도서 확보', dm:1},
-        {name:'지하저수조 상세도 검토 저수조법,기계설비기술기준', dm:4},
-        {name:'기계실 PAD 위치 및 Size 검토 소방펌프 PAD 바닥과 일체', dm:4},
-        {name:'DA 및 Louver Size 검토 [부대건물 실외기실 포함] 풍량,풍속,개구율 고려 Louver 프레임 고려', dm:4},
-        {name:'바닥 및 벽체 Opening 검토 Louver,제연급기 주차장 급배기등 기타 구조 검토 및 건축/전기 통보', dm:4},
-        {name:'전실 소화전함,제습기,알람V/V 각종 드레인배관 경로', dm:4},
-        {name:'조경part 인공지반배수 검토 집수정과 가까운 위치로 협의 지하주차장 배관 최소화', dm:4},
-        {name:'지하주차장 각종배관 경로 검토 [기계/소방/전기 협업] 오배수배관[Pumping 배관] [자연구배배관 길이 최소화] 옥내소화전/스프링클러 난방/급수/급탕/환탕 배관 [앙카가대,신축접수배관] 원격검침용 계량기 위치 유인FAN 위치', dm:5},
-        {name:'입상 및 지하횡주관 검토 [단위세대]오배수 배관 [PD/전실]배관 입상 배열 [전실]계량기함/적산열량계', dm:5},
-        {name:'부대건물[스카이라운지 제외] [인테리어 도면/외부 특화도면] 소방배관 및 헤드 에어컨 냉매 및 드레인 배관 천장내 오배수,통기,우수배관 전열교환 덕트[외부 Louver] 주방 및 화장실 배기 덕트 [ 배기CAP and Louver]', dm:5},
-        {name:'단위세대 Slab/Wall 검토 M/H 치수, 인테리어도면 이중관배관 경로 수전구,급수급탕분배기 난방분배기[전기콘센트협의] 배수드레인[매립배관] 냉장고 급수BOX[전기협의] 냉매 BOX, 드레인 BOX [옵션 드레인 BOX] 내시경 점검홀 자동식소화기 위치[전기협의] 가스계량기 [세탁기,선반간섭,전기간섭] 가스보일러[세탁기간섭]', dm:6},
-        {name:'동지하 및 피로티 검토 오배수 배관 난방,급수급탕,소방 제연급기덕트 및 제연팬룸', dm:6},
-        {name:'단위세대 천장내 복합도 검토 화장실 오배수배관 [급수급탕분배기 위치] 스프링클러 배관/헤드위치 화장실 배기 덕트[외벽 CAP] 주방 배기 덕트[외벽 CAP] 다용도실 배기 덕트 [창문 없는 경우,[외벽 CAP] 전열환기 덕트 및 디퓨져 에어컨 냉매 및 드레인배관', dm:7},
-        {name:'실외기실 배치검토 [하향식피난사다리, 전등, 콘센트, 감지기등 협의] 전열교환기 위치 / Sleeve 실외기 및 냉매배관 안방발코니 완강기', dm:7},
-        {name:'전실 소방배관 세대 인입 위치 [전실 천장고 간섭]', dm:7},
-        {name:'도시가스 입상배관 검토', dm:8},
-        {name:'입상 배관 검토 계량기 주위배관[OPC공법] 신축이음 가대 상세', dm:10},
-        {name:'단위세대 난방 Coil 검토 평형별/옵션별 작성', dm:11},
-        {name:'단위세대 천장타공도 검토 전기와 최종 협의', dm:17},
         {name:'동지하 벽체 BOX OPEN 평면도 및 단면도', dm:5},
         {name:'동지하 환기덕트 평면도 및 단면도', dm:6},
         {name:'동지하 난방, 위생배관 평면도 및 단면도', dm:7},
@@ -4398,15 +4388,118 @@ function generateSiteSchedule(duration, basement, floors){
   return { disciplines, milestones, duration, basement, floors };
 }
 
+// 5단지·6단지 "관리기준공정표" 실제 엑셀(2026-04-15 착공 기준) 반영 마일스톤.
+// 기존 표준 MILESTONES(29개 바)의 이름·순서·색상을 그대로 유지하고, 각 바에 대응하는 실제 공정표 항목을
+// 찾아 s/e(D월)만 실측값으로 교체했다. 대응 항목이 없는 바(기초/B2/B1/1F/기포방통 등 세부공정)는
+// 실제 토목·골조 완료 시점을 기준으로 한 비례 배분값을 사용했다. 전기(STAGES)는 이 값과 무관하게 그대로 유지됨.
+const REAL_MILESTONES = {
+  0: [ // 천안아이파크 5단지
+    {name:'프리콘', s:-2, e:1, color:'#2563eb'},
+    {name:'가시설 / 터파기', s:0, e:3, color:'#0891b2'},
+    {name:'파일공사', s:2, e:7, color:'#0891b2'},
+    {name:'기초', s:3, e:3, color:'#0891b2'},
+    {name:'B2', s:4, e:5, color:'#0891b2'},
+    {name:'B1', s:5, e:6, color:'#0891b2'},
+    {name:'1F', s:7, e:7, color:'#0891b2'},
+    {name:'지상골조 (2~35F)', s:3, e:20, color:'#16a34a'},
+    {name:'조적공사', s:14, e:23, color:'#f59e0b'},
+    {name:'방수공사', s:15, e:24, color:'#f59e0b'},
+    {name:'미장공사', s:16, e:26, color:'#f59e0b'},
+    {name:'외부 석공사', s:19, e:30, color:'#8b5cf6'},
+    {name:'천장공사', s:17, e:25, color:'#f59e0b'},
+    {name:'1차 기포방통', s:17, e:18, color:'#f59e0b'},
+    {name:'타일공사', s:17, e:30, color:'#8b5cf6'},
+    {name:'35F', s:20, e:21, color:'#16a34a'},
+    {name:'2차 기포방통', s:20, e:21, color:'#f59e0b'},
+    {name:'옥상층 / PH', s:21, e:22, color:'#16a34a'},
+    {name:'ELEV.', s:21, e:32, color:'#64748b'},
+    {name:'도장공사/무늬코트', s:23, e:29, color:'#8b5cf6'},
+    {name:'우오수관로공사', s:24, e:28, color:'#8b5cf6'},
+    {name:'3차 기포방통', s:24, e:25, color:'#f59e0b'},
+    {name:'가구공사', s:22, e:32, color:'#8b5cf6'},
+    {name:'수전인입', s:25, e:32, color:'#8b5cf6'},
+    {name:'도배 / 마루공사', s:25, e:31, color:'#8b5cf6'},
+    {name:'경계석 및 포장', s:29, e:31, color:'#8b5cf6'},
+    {name:'조경식재 / 시설물공사', s:27, e:34, color:'#8b5cf6'},
+    {name:'준공청소', s:31, e:33, color:'#ef4444'},
+    {name:'QC', s:31, e:34, color:'#ef4444'},
+  ],
+  1: [ // 천안아이파크 6단지
+    {name:'프리콘', s:0, e:4, color:'#2563eb'},
+    {name:'가시설 / 터파기', s:0, e:5, color:'#0891b2'},
+    {name:'파일공사', s:0, e:6, color:'#0891b2'},
+    {name:'기초', s:3, e:3, color:'#0891b2'},
+    {name:'B2', s:3, e:4, color:'#0891b2'},
+    {name:'B1', s:5, e:5, color:'#0891b2'},
+    {name:'1F', s:6, e:6, color:'#0891b2'},
+    {name:'지상골조 (2~35F)', s:5, e:21, color:'#16a34a'},
+    {name:'조적공사', s:14, e:24, color:'#f59e0b'},
+    {name:'방수공사', s:15, e:24, color:'#f59e0b'},
+    {name:'미장공사', s:15, e:27, color:'#f59e0b'},
+    {name:'외부 석공사', s:19, e:30, color:'#8b5cf6'},
+    {name:'천장공사', s:18, e:26, color:'#f59e0b'},
+    {name:'1차 기포방통', s:18, e:19, color:'#f59e0b'},
+    {name:'타일공사', s:16, e:32, color:'#8b5cf6'},
+    {name:'35F', s:21, e:22, color:'#16a34a'},
+    {name:'2차 기포방통', s:21, e:22, color:'#f59e0b'},
+    {name:'옥상층 / PH', s:22, e:23, color:'#16a34a'},
+    {name:'ELEV.', s:21, e:32, color:'#64748b'},
+    {name:'도장공사/무늬코트', s:23, e:32, color:'#8b5cf6'},
+    {name:'우오수관로공사', s:24, e:28, color:'#8b5cf6'},
+    {name:'3차 기포방통', s:24, e:26, color:'#f59e0b'},
+    {name:'가구공사', s:23, e:32, color:'#8b5cf6'},
+    {name:'수전인입', s:25, e:32, color:'#8b5cf6'},
+    {name:'도배 / 마루공사', s:25, e:32, color:'#8b5cf6'},
+    {name:'경계석 및 포장', s:29, e:32, color:'#8b5cf6'},
+    {name:'조경식재 / 시설물공사', s:27, e:34, color:'#8b5cf6'},
+    {name:'준공청소', s:32, e:33, color:'#ef4444'},
+    {name:'QC', s:32, e:34, color:'#ef4444'},
+  ],
+};
+
+// 임의의 마일스톤 배열(실제 공정표든, 관리자가 손으로 편집한 것이든)에서
+// "지하/토목" 단계와 "골조" 단계의 종료(e) 시점을 경계로 찾아, 업무 dm을 3구간 비례 재배치하는 함수를 만든다.
+// 해당 이름의 마일스톤이 없으면 buildDmRemapper와 동일한 공식 기반 값으로 대체(fallback)한다.
+function buildDmRemapperFromMilestones(milestones, newDuration, newBasement, newFloors){
+  const factor = newDuration / MASTER_DURATION;
+  const fbUnderground = Math.round(MASTER_UNDERGROUND_END*factor) + ((newBasement ?? MASTER_BASEMENT)-MASTER_BASEMENT);
+  const fbFrameEnd    = Math.round(MASTER_FRAME_END*factor*Math.max(.78,(newFloors ?? MASTER_FLOORS)/MASTER_FLOORS*factor));
+  const findEnd = (re, fallback) => { const m=(milestones||[]).find(x=>re.test(x.name)); return (m && Number.isFinite(m.e)) ? m.e : fallback; };
+  const newUnderground = findEnd(/토목|지하|터파기|가시설/, fbUnderground);
+  const newFrameEnd = Math.max(findEnd(/골조/, fbFrameEnd), newUnderground+1);
+  const uS=0, uE=MASTER_UNDERGROUND_END, fS=MASTER_UNDERGROUND_END+1, fE=MASTER_FRAME_END, gS=MASTER_FRAME_END+1, gE=MASTER_FINISH_END;
+  const nuS=0, nuE=newUnderground, nfS=newUnderground+1, nfE=newFrameEnd, ngS=newFrameEnd+1, ngE=newDuration;
+  return function remapDm(dm){
+    if(dm<0) return dm;
+    if(dm<=uE) return Math.round(nuS + (dm-uS)/(uE-uS||1)*(nuE-nuS));
+    if(dm<=fE) return Math.round(nfS + (dm-fS)/(fE-fS||1)*(nfE-nfS));
+    if(dm<=gE) return Math.round(ngS + (dm-gS)/(gE-gS||1)*(ngE-ngS));
+    return newDuration + (dm-MASTER_DURATION);
+  };
+}
+
+// 지정된 마일스톤 구간에 맞춰(비례) 업무프로세스맵 전체를 재배치한 스케줄 생성
+// — 마일스톤이 바뀌면(실제 공정표 반영이든 관리자 수동편집이든) 업무 시점도 항상 같이 따라가도록 함
+function generateSiteScheduleWithMilestones(milestones, duration, basement, floors){
+  const disciplines = JSON.parse(JSON.stringify(DISCIPLINES));
+  const remap = buildDmRemapperFromMilestones(milestones, duration, basement, floors);
+  disciplines.forEach(d=>d.categories.forEach(c=>c.tasks.forEach(t=>{ t.dm = remap(t.dm); })));
+  return { disciplines, milestones: JSON.parse(JSON.stringify(milestones)), duration, basement, floors, _msRemap:true };
+}
+
 // siteId의 스케줄을 반환 (없으면 마스터 템플릿 그대로 즉석 생성해 붙여줌)
 function getSiteSchedule(siteId){
   const site = sites[siteId];
   if(!site) return { disciplines:DISCIPLINES, milestones:MILESTONES };
-  if(!site.schedule){
+  // REAL_MILESTONES가 있는 현장인데, 이전 세션에 옛날 방식(공식 기반)으로 캐시된 스케줄이면 1회 재생성
+  const needsRealInit = REAL_MILESTONES[siteId] && !(site.schedule && site.schedule._msRemap);
+  if(!site.schedule || needsRealInit){
     site.duration = site.duration || MASTER_DURATION;
     site.basement = site.basement ?? MASTER_BASEMENT;
     site.floors   = site.floors   || MASTER_FLOORS;
-    site.schedule = generateSiteSchedule(site.duration, site.basement, site.floors);
+    site.schedule = REAL_MILESTONES[siteId]
+      ? generateSiteScheduleWithMilestones(REAL_MILESTONES[siteId], site.duration, site.basement, site.floors)
+      : generateSiteSchedule(site.duration, site.basement, site.floors);
   }
   return site.schedule;
 }
@@ -4696,15 +4789,15 @@ function ssApply(){
   const basement = parseInt(document.getElementById('ss-basement').value) ?? MASTER_BASEMENT;
   const floors   = parseInt(document.getElementById('ss-floors').value) || MASTER_FLOORS;
   const startVal = document.getElementById('ss-start').value;
-  const fresh = generateSiteSchedule(duration, basement, floors); // 업무 시점은 항상 현재 입력값 기준으로 새로 재배치
+  // 편집된 마일스톤 구간에 비례해서 업무 시점도 함께 재배치
+  site.schedule = generateSiteScheduleWithMilestones(ssCtx.milestones, duration, basement, floors);
   site.duration = duration;
   site.basement = basement;
   site.floors = floors;
   if(startVal) site.start = startVal;
-  site.schedule = { disciplines: fresh.disciplines, milestones: ssCtx.milestones, duration, basement, floors };
   saveState();
   closeAll();
-  showNotif('✅ 적용됨', `${site.name} 현장 프로세스맵이 새 설정으로 재배치되었습니다.`);
+  showNotif('✅ 적용됨', `${site.name} 현장 프로세스맵이 마일스톤 구간에 비례해 재배치되었습니다.`);
   const msi = document.getElementById('mgr-start');
   if(msi) msi.value = site.start;
   renderManager();
