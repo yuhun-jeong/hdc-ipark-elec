@@ -110,15 +110,21 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:13p
 .tbl-scroll::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:5px;border:2px solid var(--surf2);}
 .tbl-scroll::-webkit-scrollbar-corner{background:var(--surf2);}
 table{border-collapse:collapse;width:max-content;min-width:100%;}
+/* 업무가 적은 공종(건축토목·조경 등)은 컬럼 수가 적어도 매트릭스가 강제로 화면 폭만큼 늘어나지 않고 내용 너비에 맞게만 표시 */
+#main-table,#field-table,#fd-table{min-width:0;}
 
 /* ── THEAD ── */
 thead th{background:var(--surf2);border-bottom:2px solid var(--bd2);border-right:1px solid var(--bd);padding:0;position:sticky;top:0;z-index:30;}
+/* 업무 매트릭스(본사/현장) 헤더 칸만 좁게 고정 — 다른(관리자 목록 등) 테이블 헤더는 영향받지 않음 */
+#main-table thead th:not(.th-fix),
+#field-table thead th:not(.th-fix),
+#fd-table thead th:not(.th-fix){max-width:80px;}
 thead th:last-child{border-right:none;}
 .th-fix{position:sticky;left:0;z-index:40!important;background:var(--surf2)!important;border-right:2px solid var(--bd2)!important;min-width:220px;width:220px;}
-.th-site-inner{padding:13px 16px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);}
-.th-stage-inner{padding:7px 4px 5px;text-align:center;min-width:72px;max-width:100px;}
-.th-step{font-size:9px;font-family:var(--mono);color:var(--t3);letter-spacing:.05em;margin-bottom:3px;}
-.th-name{font-size:10px;font-weight:700;color:var(--t2);line-height:1.35;}
+.th-site-inner{padding:13px 16px;font-size:15px;font-weight:900;letter-spacing:.04em;color:var(--t1);display:flex;align-items:center;justify-content:center;text-align:center;height:100%;}
+.th-stage-inner{padding:6px 3px 4px;text-align:center;min-width:60px;max-width:76px;}
+.th-step{font-size:8px;font-family:var(--mono);color:var(--t3);letter-spacing:.03em;margin-bottom:2px;}
+.th-name{font-size:11px;font-weight:800;color:var(--t1);line-height:1.3;word-break:keep-all;overflow-wrap:anywhere;}
 
 /* ── TBODY ── */
 tbody tr{border-bottom:1px solid var(--bd);}
@@ -134,7 +140,7 @@ tbody tr:hover .td-fix{background:var(--surf2);}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 .site-name{font-size:13px;font-weight:800;}
 .site-meta{font-size:11px;color:var(--t3);margin-top:1px;}
-.td-st{vertical-align:middle;text-align:center;border-right:1px solid var(--bd);padding:7px 5px;min-width:112px;cursor:pointer;}
+.td-st{vertical-align:middle;text-align:center;border-right:1px solid var(--bd);padding:6px 3px;min-width:76px;max-width:150px;cursor:pointer;overflow-wrap:anywhere;}
 .td-st:last-child{border-right:none;}
 .td-st:hover{filter:brightness(.98);}
 .td-st.done   {background:var(--gb);}
@@ -143,21 +149,21 @@ tbody tr:hover .td-fix{background:var(--surf2);}
 .td-st.overdue{background:var(--rb);}
 .td-st.pending{background:transparent;}
 .td-st.sample {background:rgba(99,102,241,.04);}
-.cell{display:flex;flex-direction:column;align-items:center;gap:4px;}
-.badge{display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:5px 8px;border-radius:7px;font-size:11px;font-weight:800;width:92%;white-space:nowrap;}
+.cell{display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:anywhere;word-break:break-word;}
+.badge{display:inline-flex;align-items:center;justify-content:center;gap:2px;padding:4px 5px;border-radius:6px;font-size:9.5px;font-weight:800;width:94%;white-space:nowrap;}
 .badge.done   {background:var(--gm);color:var(--g);}
 .badge.ontrack{background:var(--bm);color:var(--b);}
 .badge.warning{background:var(--ym);color:var(--y);}
 .badge.overdue{background:var(--rm);color:var(--r);}
 .badge.pending{color:var(--t3);font-weight:600;}
 .badge.sample {background:rgba(99,102,241,.1);color:#6366f1;border:1px dashed rgba(99,102,241,.3);font-size:10px;}
-.dday{font-size:10px;font-family:var(--mono);font-weight:700;}
+.dday{font-size:9px;font-family:var(--mono);font-weight:700;}
 .dday.safe{color:var(--b);}
 .dday.warn{color:var(--y);}
 .dday.urg {color:var(--r);}
 .dday.over{color:var(--r);}
-.date-lbl{font-size:10px;font-family:var(--mono);color:var(--t3);}
-.ftag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;}
+.date-lbl{font-size:9px;font-family:var(--mono);color:var(--t3);}
+.ftag{display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;}
 .ftag.yes{background:var(--gm);color:var(--g);}
 .ftag.no {color:var(--t3);border:1px dashed var(--bd2);padding:1px 6px;}
 
@@ -182,6 +188,15 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 .fstat{text-align:center;}
 .fstat-num{font-size:24px;font-weight:900;letter-spacing:-.04em;line-height:1;}
 .fstat-lbl{font-size:11px;color:var(--t3);margin-top:2px;font-weight:600;}
+
+/* 공종 선택 카드(관리자) / 공종 뱃지 — 이모티콘 없이 색상 점 + 굵은 글자로 구분 (공종별 프로세스맵 공종카드와 같은 톤) */
+.fd-disc-card{display:flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px;border:1.5px solid var(--bd);background:var(--surf2);cursor:pointer;font-size:14px;font-weight:800;color:var(--t2);border-top:3px solid var(--dc);transition:all .15s;}
+.fd-disc-card:hover{filter:brightness(.97);}
+.fd-disc-card.active{background:var(--dc);color:#fff;border-color:var(--dc);}
+.fd-disc-card.active .fd-disc-dot{background:#fff;}
+.fd-disc-dot{width:9px;height:9px;border-radius:50%;background:var(--dc);flex-shrink:0;}
+.fd-disc-badge{display:inline-flex;align-items:center;gap:9px;padding:9px 18px;border-radius:12px;font-size:16px;font-weight:900;border:1.5px solid;flex-shrink:0;}
+.fd-disc-badge .fd-disc-dot{width:11px;height:11px;background:currentColor;}
 
 .progress-wrap{background:var(--surf);border:1px solid var(--bd);border-radius:16px;padding:14px 20px;box-shadow:var(--shadow);}
 .progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
@@ -590,6 +605,16 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     <button class="vtab" id="ftab-map" onclick="switchFieldTab('map')">🗺️ 전공종 프로세스맵</button>
   </div>
 
+  <!-- 관리자 전용: 공종 선택 카드 (각 공종 현장담당자 화면을 모두 열람, 공종별 프로세스맵의 공종카드와 동일한 톤) -->
+  <div id="field-disc-tabs" style="display:none;gap:8px;background:var(--surf1);padding:12px 20px;flex-shrink:0;border-bottom:1px solid var(--bd);align-items:center;">
+    <span style="font-size:11px;font-weight:800;color:var(--t3);letter-spacing:.04em;margin-right:2px">공종 보기</span>
+    <div class="fd-disc-card active" data-fd-disc="전기" onclick="setAdminFieldDiscipline('전기')" style="--dc:#315efb"><span class="fd-disc-dot"></span>전기</div>
+    <div class="fd-disc-card" data-fd-disc="건축" onclick="setAdminFieldDiscipline('건축')" style="--dc:#8b5cf6"><span class="fd-disc-dot"></span>건축</div>
+    <div class="fd-disc-card" data-fd-disc="기계" onclick="setAdminFieldDiscipline('기계')" style="--dc:#f59e0b"><span class="fd-disc-dot"></span>기계</div>
+    <div class="fd-disc-card" data-fd-disc="건축토목" onclick="setAdminFieldDiscipline('건축토목')" style="--dc:#06b6d4"><span class="fd-disc-dot"></span>건축토목</div>
+    <div class="fd-disc-card" data-fd-disc="조경" onclick="setAdminFieldDiscipline('조경')" style="--dc:#16a34a"><span class="fd-disc-dot"></span>조경</div>
+  </div>
+
   <!-- 공정 현황 패널 -->
   <div id="fpanel-status" style="flex:1;display:flex;flex-direction:column;min-height:0;padding:16px 0 0;">
   <div class="field-header" style="margin-bottom:14px;flex-shrink:0;margin:0 0 14px;">
@@ -638,6 +663,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <!-- 공종별(건축 등) 업무 현황 패널 — 업무 단위 리스트/아코디언 -->
   <div id="fpanel-status-disc" style="display:none;flex:1;flex-direction:column;min-height:0;padding:16px 0 0;">
     <div class="field-header" style="margin-bottom:14px;flex-shrink:0;margin:0 20px 14px;">
+      <div class="fd-disc-badge" id="fd-disc-badge"><span class="fd-disc-dot"></span>—</div>
       <div class="field-site-sel">
         <label>담당 현장</label>
         <select class="site-sel" id="fd-field-sel" onchange="onFdSiteSelChange()"></select>
@@ -655,7 +681,15 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <div class="progress-bar"><div class="progress-fill" id="fd-bar" style="width:0%"></div></div>
       </div>
     </div>
-    <div id="fd-body" style="flex:1;overflow:auto;padding:0 20px 20px;"></div>
+    <div class="tbl-outer">
+      <div class="tbl-scroll" id="fd-tbl-scroll">
+        <table id="fd-table">
+          <thead id="fd-thead"></thead>
+          <tbody id="fd-tbody"></tbody>
+          <tfoot><tr id="fd-foot-row"><td class="td-fix-foot">단계별 완료</td></tr></tfoot>
+        </table>
+      </div>
+    </div>
   </div><!-- /fpanel-status-disc -->
 
   <!-- 전공종 프로세스맵 패널 -->
@@ -1269,6 +1303,8 @@ async function doLogin(){
   loadStatusFromSupabase();
   loadGuidelinesFromSupabase();
   loadSiteStagesFromSupabase();
+  loadTaskAssetsFromSupabase();
+  loadDiscStatusFromSupabase();
 }
 
 // Supabase에서 전체 users 불러오기
@@ -1651,7 +1687,7 @@ let sites = [
       const dl=fmt(addDays(new Date('2026-04-01'),mon*30));
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
-      st:i<8?'done':i===8?'ontrack':'pending', memo:'', file:i<8?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
+      st:'pending', memo:'', file:null }; }) },
   { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-15', status:'red', duration:34, basement:3, floors:42, stageActive:STAGES.map(()=>true), taskStatus:{},
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
@@ -1659,7 +1695,7 @@ let sites = [
       const dl=fmt(addDays(new Date('2026-04-01'),mon*30));
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
       completed:null,
-      st:i<4?'done':i===4?'overdue':'pending', memo:'', file:i<4?DOCS[i].split(',')[0].trim()+'.pdf':null }; }) },
+      st:'pending', memo:'', file:null }; }) },
   { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, stageActive:STAGES.map(()=>true), taskStatus:{}, active:false,
     tasks: STAGES.map((s,i)=>{ 
       const dm=STAGE_DMONTH[i]||'D+1';
@@ -1673,15 +1709,26 @@ let sites = [
       const mon=dm.includes('준공+')?34+parseInt(dm.replace('준공+','')):parseInt(dm.replace('D','').replace('+',''))||1;
       const dl=fmt(addDays(new Date('2026-10-01'),mon*30));
       return { stage:s, docs:DOCS[i], cat:STAGE_CAT[i], deadline:dl,
-      completed:null, st:i===0?'warning':'pending', memo:'', file:null }; }) },
+      completed:null, st:'pending', memo:'', file:null }; }) },
 ];
 
 let focusedCell=null;
+
+// 마감일이 지났는데 완료 처리가 안 된 전기(STAGES) 업무는 자동으로 '지연'으로 승격.
+// 전공종 프로세스맵(Gantt)과 공정 현황 매트릭스가 항상 같은 상태를 보이도록 두 화면 모두 이 값을 그대로 사용.
+function syncStageOverdue(site){
+  if(!site || !site.tasks) return;
+  site.tasks.forEach(t=>{
+    if(t.st!=='done' && dLeft(t.deadline)<0) t.st='overdue';
+  });
+  updateSiteStatus(site.id); // 현장 전체 상태(초록/노랑/빨강 점)도 같이 갱신
+}
 
 // ════════════════════════════
 //  HQ RENDER
 // ════════════════════════════
 function renderHQ(){
+  sites.forEach(syncStageOverdue);
   saveState();
   rebuildHQThead();
   const hqSortedIdx = getHQSortedIndices();
@@ -1801,7 +1848,7 @@ let taskGuides = {}; // taskKey -> {name,url,updatedAt}
 //  실제 서버/DB 연동 전까지 새로고침해도 데이터 유지
 // ════════════════════════════
 const STORAGE_KEY='dxtElecStateV6';
-const DATA_VERSION='v6.8'; // 이 값 바꾸면 자동으로 localStorage 초기화 (기계 SHOPDRAWING 카테고리 19개 업무 삭제 반영)
+const DATA_VERSION='v6.9'; // 이 값 바꾸면 자동으로 localStorage 초기화 (전기 STAGES 완료/진행중 데모 상태 초기화 → 전부 대기로 리셋, 지연은 마감일 기준 자동판정)
 // Supabase에 공정 상태 저장
 async function saveStatusToSupabase(siteId, stageIdx, status, memo, fileName, deadline){
   try {
@@ -1873,9 +1920,27 @@ function loadState(){
 }
 loadState();
 
+// 관리자가 "공정 현황" 탭에서 현재 보고 있는 공종 (관리자 전용 공종 선택 탭에서 바뀜)
+let adminFieldDiscipline = '전기';
+
+function setAdminFieldDiscipline(name){
+  adminFieldDiscipline = name;
+  document.querySelectorAll('#field-disc-tabs [data-fd-disc]').forEach(b=>b.classList.toggle('active', b.dataset.fdDisc===name));
+  switchFieldTab('status');
+}
+
+// 현재 "공정 현황" 탭에 표시해야 할 공종명 — SITE는 본인 공종 고정, 관리자는 선택한 공종
+function currentFieldDiscipline(){
+  if(currentUser?.role==='ADMIN') return adminFieldDiscipline;
+  return currentUser?.discipline || '';
+}
+
 // 전기 STAGES 기반 화면인지, 다른 공종(건축 등) 업무 리스트 화면인지 판단
 function isDiscFieldMode(){
-  return !!(currentUser && currentUser.role==='SITE' && currentUser.discipline && currentUser.discipline!=='전기');
+  if(!currentUser) return false;
+  if(currentUser.role!=='SITE' && currentUser.role!=='ADMIN') return false;
+  const d = currentFieldDiscipline();
+  return !!(d && d!=='전기');
 }
 
 function refreshFieldSel(forceSiteId){
@@ -1906,6 +1971,7 @@ function renderField(){
   saveState();
   const siteId=parseInt(document.getElementById('field-sel').value);
   const site=sites[siteId];
+  syncStageOverdue(site);
   if(!site){
     document.getElementById('f-total').textContent='—';
     document.getElementById('f-done').textContent='—';
@@ -1946,7 +2012,7 @@ function renderField(){
     const dlChanged=dm!==fPrevDeadline;
     const bl=dlChanged?'border-left:2px solid var(--bd2)!important':'';
     if(dlChanged) fPrevDeadline=dm;
-    function wrapText(str, maxLen=10){
+    function wrapText(str, maxLen=7){
       if(str.length<=maxLen) return str;
       let result='', line='';
       const parts = str.split(/([\s,·]+)/);
@@ -1959,7 +2025,7 @@ function renderField(){
       result+=line;
       return result;
     }
-    const short=wrapText(s, 10);
+    const short=wrapText(s, 7);
     const dlDisp = dm ? fmtDisp(dm) : '';
     thHtml+=`<th style="${bl};border-top:3px solid ${col}"><div class="th-stage-inner">
       <div class="th-step" style="color:${col};font-weight:800;font-size:8px">${STAGE_CAT[i]}</div>
@@ -2097,6 +2163,9 @@ function getDiscTaskStatus(site, key, task){
     site.taskStatus[key] = { st:'pending', memo:'', file:null, fileUrl:null, deadline:discTaskDeadline(site, task), completed:null };
   }
   const t = site.taskStatus[key];
+  // 마감일을 직접 수정한 적이 없으면, 공종별 프로세스맵에서 업무 시점(dm)이 바뀔 때마다 항상 최신 시점을 따라감
+  // — 현장담당자 화면이 공종별 프로세스맵과 항상 같은 순서/시점으로 연동되도록
+  if(!t.manualDeadline) t.deadline = discTaskDeadline(site, task);
   if(t.st!=='done' && dLeft(t.deadline)<0) t.st='overdue';
   return t;
 }
@@ -2166,22 +2235,39 @@ function toggleFdCat(headEl){
 }
 
 // 현장 담당자 화면(공종별) 렌더링
+// 전기(STAGES) 매트릭스와 같은 좌우 형태로 통일하기 위한 공종별 카테고리 색상 팔레트
+const DISC_CAT_PALETTE = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6'];
+
+// 공종담당자 화면(공정 현황) — 전기(STAGES) field-table과 동일한 좌우 매트릭스로 렌더링.
+// 컬럼 = 본인 공종의 업무(마감일 순 정렬), 행 = 필요양식 / 관련지침 / 본인 현장 상태
 function renderFieldDiscipline(){
   saveState();
   const siteId = parseInt(document.getElementById('fd-field-sel').value);
   const site = sites[siteId];
-  const body = document.getElementById('fd-body');
-  if(!site || !currentUser || !currentUser.discipline){
-    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3)">배속된 현장이 없습니다. 관리자에게 문의해주세요.</div>';
+  const discName = currentFieldDiscipline();
+  if(!site || !currentUser || !discName){
     ['fd-total','fd-done','fd-urgent'].forEach(id=>document.getElementById(id).textContent='—');
     document.getElementById('fd-pct').textContent='0%'; document.getElementById('fd-bar').style.width='0%';
+    document.getElementById('fd-thead').innerHTML='';
+    document.getElementById('fd-tbody').innerHTML='<tr><td style="padding:24px;text-align:center;color:var(--t3)">배속된 현장이 없습니다. 관리자에게 문의해주세요.</td></tr>';
+    document.getElementById('fd-foot-row').innerHTML='<td class="td-fix-foot">단계별 완료</td>';
     return;
   }
   const schedule = getSiteSchedule(siteId);
-  const disc = findDiscByName(schedule, currentUser.discipline);
+  const disc = findDiscByName(schedule, discName);
   if(!disc){
-    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--t3)">해당 공종 데이터가 없습니다.</div>';
+    document.getElementById('fd-thead').innerHTML='';
+    document.getElementById('fd-tbody').innerHTML='<tr><td style="padding:24px;text-align:center;color:var(--t3)">해당 공종 데이터가 없습니다.</td></tr>';
+    document.getElementById('fd-foot-row').innerHTML='<td class="td-fix-foot">단계별 완료</td>';
     return;
+  }
+  // 어떤 공종을 보고 있는지 한눈에 보이는 컬러 뱃지
+  const badgeEl = document.getElementById('fd-disc-badge');
+  if(badgeEl){
+    badgeEl.style.color = disc.color;
+    badgeEl.style.borderColor = disc.color;
+    badgeEl.style.background = disc.color+'15';
+    badgeEl.innerHTML = `<span class="fd-disc-dot"></span>${disc.name} 공정 현황`;
   }
   const items = collectDiscTasks(site, disc);
   const total = items.length;
@@ -2193,7 +2279,123 @@ function renderFieldDiscipline(){
   document.getElementById('fd-urgent').textContent=urgent;
   document.getElementById('fd-pct').textContent=pct+'%';
   document.getElementById('fd-bar').style.width=pct+'%';
-  body.innerHTML = buildDiscAccordionHtml(site, disc, items);
+
+  // 마감일 순 정렬 (STAGES field-table과 동일한 방식)
+  const sorted = items.slice().sort((a,b)=>{
+    const da=a.status.deadline, db=b.status.deadline;
+    return da<db ? -1 : da>db ? 1 : 0;
+  });
+  const catColors={};
+  disc.categories.forEach((c,i)=>{ catColors[c.name]=DISC_CAT_PALETTE[i%DISC_CAT_PALETTE.length]; });
+  function wrapText(str, maxLen=7){
+    if(str.length<=maxLen) return str;
+    let result='', line='';
+    const parts = str.split(/([\s,·]+)/);
+    for(let p of parts){
+      if((line+p).length > maxLen && line.length>0){ result += line.trimEnd()+'<br>'; line=p.trimStart(); }
+      else { line+=p; }
+    }
+    result+=line;
+    return result;
+  }
+
+  // ── thead
+  let thHtml='<tr><th class="th-fix"><div class="th-site-inner">구분</div></th>';
+  let fPrevDeadline='';
+  sorted.forEach((it,seq)=>{
+    const col = catColors[it.cat.name]||'#666';
+    const dm = it.status.deadline;
+    const dlChanged = dm!==fPrevDeadline;
+    const bl = dlChanged?'border-left:2px solid var(--bd2)!important':'';
+    if(dlChanged) fPrevDeadline=dm;
+    thHtml+=`<th style="${bl};border-top:3px solid ${col}"><div class="th-stage-inner">
+      <div class="th-step" style="color:${col};font-weight:800;font-size:8px">${it.cat.name}</div>
+      <div class="th-step" style="color:#6366f1;font-weight:700;font-size:8px">${fmtDisp(dm)}</div>
+      <div class="th-step">${String(seq+1).padStart(2,'0')}</div>
+      <div class="th-name">${wrapText(it.task.name, 7)}</div>
+    </div></th>`;
+  });
+  thHtml+='</tr>';
+  document.getElementById('fd-thead').innerHTML=thHtml;
+
+  // ── tbody
+  let tbHtml='';
+
+  // 1행: 필요 양식
+  tbHtml+=`<tr class="tr-sample" data-status="sample">
+    <td class="td-fix"><div class="td-fix-inner">
+      <div class="dot p"></div>
+      <div><div class="sample-chip">📋 필요 양식</div>
+        <div class="site-name" style="color:#6366f1">${disc.name} 양식</div>
+        <div class="site-meta">업무별 표준양식</div>
+      </div></div></td>`;
+  sorted.forEach(it=>{
+    tbHtml+=`<td class="td-st sample"><div class="cell">${renderTaskAssetView(it.key,'form',it.task)}</div></td>`;
+  });
+  tbHtml+='</tr>';
+
+  // 2행: 관련 지침
+  tbHtml+=`<tr style="background:rgba(245,158,11,.02)">
+    <td class="td-fix" style="background:rgba(245,158,11,.04)!important"><div class="td-fix-inner">
+      <div class="dot y"></div>
+      <div><div class="sample-chip" style="background:rgba(245,158,11,.12);color:var(--y);border-color:rgba(245,158,11,.25)">📌 지침</div>
+        <div class="site-name" style="color:var(--y)">관련 지침</div>
+        <div class="site-meta">업무별 관련 지침</div>
+      </div></div></td>`;
+  sorted.forEach(it=>{
+    tbHtml+=`<td class="td-st" style="background:rgba(245,158,11,.03)"><div class="cell">${renderTaskAssetView(it.key,'guide',it.task)}</div></td>`;
+  });
+  tbHtml+='</tr>';
+
+  // 3행: 현장 담당자 본인 현장 행
+  const dotCls=site.status==='green'?'g':site.status==='red'?'r':'y';
+  tbHtml+=`<tr data-status="${site.status}">
+    <td class="td-fix"><div class="td-fix-inner">
+      <div class="dot ${dotCls}"></div>
+      <div><div class="site-name">${site.name}</div>
+        <div class="site-meta">${site.mgr} · ${disc.name} 담당</div>
+      </div></div></td>`;
+  sorted.forEach(it=>{
+    const t=it.status;
+    const dl=dLeft(t.deadline);
+    let badgeTxt;
+    if(t.st==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
+    else if(t.st==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
+    else if(t.st==='warning') badgeTxt='<span class="badge warning">⚠ 주의</span>';
+    else if(t.st==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
+    else badgeTxt='<span class="badge pending">— 대기</span>';
+    let ddayHtml='';
+    if(t.st!=='done'&&t.st!=='pending'){
+      const dc=dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
+      ddayHtml=`<div class="dday ${dc}">${dl<0?`D+${Math.abs(dl)}`:`D-${dl}`}</div>`;
+    }
+    ddayHtml+=`<div class="date-lbl">${fmtDisp(t.deadline)}</div>`;
+    const fileHtml=t.file?`<span class="ftag yes">📎 제출</span>`:(t.st!=='pending'?`<span class="ftag no">미제출</span>`:'');
+    tbHtml+=`<td class="td-st ${t.st}" onclick="openDiscCell(${siteId},'${disc.key}',${it.ci},${it.ti})" style="cursor:pointer">
+      <div class="cell">${badgeTxt}${ddayHtml}${fileHtml}</div></td>`;
+  });
+  tbHtml+='</tr>';
+
+  document.getElementById('fd-tbody').innerHTML=tbHtml;
+
+  // ── tfoot
+  let ftHtml='<td class="td-fix-foot">단계별 완료</td>';
+  sorted.forEach(it=>{
+    const cnt=it.status.st==='done'?1:0;
+    ftHtml+=`<td><span style="color:${cnt?'var(--g)':'var(--t3)'}">${cnt?'✓':'—'}</span></td>`;
+  });
+  document.getElementById('fd-foot-row').innerHTML=ftHtml;
+
+  // 드래그 스크롤
+  const fel=document.getElementById('fd-tbl-scroll');
+  if(fel&&!fel._dragBound){
+    fel._dragBound=true;
+    let fd=false,fsx,fsy,fsl,fst;
+    fel.addEventListener('mousedown',e=>{fd=true;fsx=e.pageX-fel.offsetLeft;fsy=e.pageY-fel.offsetTop;fsl=fel.scrollLeft;fst=fel.scrollTop;});
+    fel.addEventListener('mouseleave',()=>fd=false);
+    fel.addEventListener('mouseup',()=>fd=false);
+    fel.addEventListener('mousemove',e=>{if(!fd)return;e.preventDefault();fel.scrollLeft=fsl-(e.pageX-fel.offsetLeft-fsx);fel.scrollTop=fst-(e.pageY-fel.offsetTop-fsy);});
+  }
 }
 
 // 공종 업무 셀 클릭 → 기존 ov-cell 팝업 재사용 (STAGES와 별개 경로: focusedCell.mode='disc')
@@ -2232,6 +2434,32 @@ async function saveDiscStatusToSupabase(siteId, key, status, memo, fileName, dea
     if(existing && existing.length>0) await sb.update('disc_task_status', `?site_id=eq.${siteId+1}&task_key=eq.${key}`, data);
     else await sb.insert('disc_task_status', data);
   } catch(e){ console.log('disc_task_status 동기화 실패 (테이블 없으면 로컬에만 저장됩니다):', e); }
+}
+
+// Supabase disc_task_status 테이블에서 공종 업무 상태 전체 불러오기 (다른 기기/사용자가 입력한 상태도 반영)
+async function loadDiscStatusFromSupabase(){
+  try {
+    const rows = await sb.select('disc_task_status', '?order=updated_at');
+    if(!rows || !rows.length) return;
+    rows.forEach(row=>{
+      const siteIdx = (row.site_id||0) - 1;
+      const site = sites[siteIdx];
+      if(!site) return;
+      if(!site.taskStatus) site.taskStatus = {};
+      const cur = site.taskStatus[row.task_key] || {};
+      site.taskStatus[row.task_key] = {
+        ...cur,
+        st: row.status || cur.st || 'pending',
+        memo: row.memo ?? cur.memo ?? '',
+        file: row.file_name ?? cur.file ?? null,
+        deadline: row.deadline || cur.deadline,
+      };
+    });
+    saveState();
+    console.log(`disc_task_status 로드: ${rows.length}건`);
+    if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
+    if(document.getElementById('view-hq-arch')?.classList.contains('active')) renderHqArch();
+  } catch(e) { console.log('disc_task_status 불러오기 실패 (테이블이 없으면 로컬 데이터만 사용됩니다):', e); }
 }
 
 // ── 본사 대시보드: 현장별 공종 요약(완료/지연) — 2단계 드릴다운의 1단계
@@ -2730,6 +2958,7 @@ function saveDiscCellDate(){
   if(origDeadline && newDate !== origDeadline){
     if(!t.scheduleLog) t.scheduleLog=[];
     t.scheduleLog.push({ date:fmt(today), from:origDeadline, to:newDate, reason:newMemo||'사유 미입력', by:currentUser?.name||'-' });
+    t.manualDeadline = true; // 수동으로 날짜를 바꾼 업무는 공종별 프로세스맵 시점 변경에 자동으로 따라가지 않음
   }
   t.deadline=newDate; t.memo=newMemo; t.st=newSt;
   if(newSt==='done' && !t.completed) t.completed=fmt(today);
@@ -2836,7 +3065,12 @@ function switchView(v){
     document.getElementById(`vtab-${name}`)?.classList.toggle('active',v===name);
     document.getElementById(`view-${name}`)?.classList.toggle('active',v===name);
   });
-  if(v==='field')   renderField();
+  if(v==='field'){
+    // 관리자 공종탭/공정현황·전공종맵 중 현재 활성 서브탭에 맞게 다시 그림 (STAGES/공종별 화면 뒤섞이지 않도록)
+    if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
+    else if(isDiscFieldMode()) renderFieldDiscipline();
+    else renderField();
+  }
   if(v==='admin')   renderAdmin();
   if(v==='manager') renderManager();
   if(v==='hq-arch') renderHqArch();
@@ -4591,9 +4825,38 @@ function taskKey(discKey, catIdx, taskIdx){ return discKey+'-'+catIdx+'-'+taskId
 
 // 업로드된 파일이 없을 때 보여줄 예시 파일명 (실제 연동된 것처럼 보이되, "예시" 배지로 구분)
 function taskAssetPlaceholder(task, kind){
+  // 업무명이 길어도(기계·건축 등) 양식/지침 행이 가로로 늘어나지 않도록 파일명은 짧게만 표시
+  const short = task.name.length>8 ? task.name.slice(0,8)+'…' : task.name;
   return kind==='form'
-    ? { name:`${task.name} 표준양식.hwp`, url:null, placeholder:true }
-    : { name:`${task.name} 관련지침.pdf`, url:null, placeholder:true };
+    ? { name:`${short} 양식.hwp`, url:null, placeholder:true }
+    : { name:`${short} 지침.pdf`, url:null, placeholder:true };
+}
+
+// 현장 담당자는 양식/지침을 업로드가 아니라 다운로드만 받는 구조 — 강제 다운로드 시도(파일 형식에 따라 새 탭에서 열릴 수도 있음)
+function downloadTaskAsset(url, name){
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name || '';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// 현장담당자 화면(공정 현황 매트릭스) 전용 — 관리자가 이 화면을 보고 있어도 항상 보기 전용.
+// "예시" 문구 없이, 실제 등록된 파일만 다운로드로 보여주고 없으면 "미등록"만 표시. 업로드는 공종별 프로세스맵의 업무 상세 팝업에서만.
+function renderTaskAssetView(key, kind, task){
+  const store = kind==='form' ? taskForms : taskGuides;
+  const asset = store[key];
+  if(!asset || !asset.url){
+    return `<span style="font-size:10px;color:var(--t3)">— 미등록</span>`;
+  }
+  const safeName = (asset.name||'').replace(/"/g,'&quot;');
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:130px">
+    <div title="${safeName}" style="font-size:10px;font-weight:700;color:var(--t1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${asset.name}</div>
+    <button onclick="downloadTaskAsset('${asset.url}','${(asset.name||'').replace(/'/g,"\\'")}')" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 8px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">⬇ 다운로드</button>
+  </div>`;
 }
 
 function renderTaskAsset(key, kind, task){
@@ -4601,17 +4864,21 @@ function renderTaskAsset(key, kind, task){
   const asset = store[key] || taskAssetPlaceholder(task, kind);
   const isAdmin = currentUser && (currentUser.role==='HQ'||currentUser.role==='ADMIN');
   const icon = kind==='form' ? '📄' : '📌';
+  const safeName = (asset.name||'').replace(/"/g,'&quot;');
+  // 파일명이 길어도(업무명이 긴 기계·건축 등) 칸이 가로로 늘어나지 않도록 한 줄로 말줄임(전체 이름은 title 툴팁)
+  const nameHtml = `<div title="${safeName}" style="font-size:10px;font-weight:700;color:${asset.placeholder?'var(--t3)':'var(--t1)'};max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon} ${asset.name}</div>`;
   const tag = asset.placeholder
     ? `<span style="font-size:9px;font-weight:800;color:var(--t3);background:var(--surf2);border:1px dashed var(--bd2);border-radius:4px;padding:1px 6px">예시</span>`
     : `<span style="font-size:9px;font-weight:800;color:var(--g);background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);border-radius:4px;padding:1px 6px">등록됨</span>`;
   const openBtn = asset.url
-    ? `<button onclick="window.open('${asset.url}','_blank')" style="background:var(--surf2);color:var(--t2);border:1px solid var(--bd2);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--sans)">열람</button>` : '';
+    ? `<button onclick="downloadTaskAsset('${asset.url}','${(asset.name||'').replace(/'/g,"\\'")}')" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">⬇ 다운로드</button>` : '';
   const editBtn = isAdmin
-    ? `<button onclick="uploadTaskAsset('${key}','${kind}')" style="background:rgba(49,94,251,.12);color:#315efb;border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--sans)">${asset.placeholder?'업로드':'교체'}</button>` : '';
+    ? `<button onclick="uploadTaskAsset('${key}','${kind}')" style="background:rgba(49,94,251,.12);color:#315efb;border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">${asset.placeholder?'업로드':'교체'}</button>` : '';
   const delBtn = (isAdmin && !asset.placeholder)
-    ? `<button onclick="removeTaskAsset('${key}','${kind}')" style="background:transparent;color:var(--r);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--sans)">삭제</button>` : '';
-  return `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-    <span>${icon} ${asset.name}</span>${tag}${openBtn}${editBtn}${delBtn}
+    ? `<button onclick="removeTaskAsset('${key}','${kind}')" style="background:transparent;color:var(--r);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">삭제</button>` : '';
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:130px">
+    ${nameHtml}
+    <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center">${tag}${openBtn}${editBtn}${delBtn}</div>
   </div>`;
 }
 
@@ -4678,9 +4945,12 @@ async function uploadTaskAsset(key, kind){
       store[key] = { name:f.name, url:publicUrl, updatedAt:Date.now() };
       saveState();
       try {
-        await sb.insert('task_assets', { task_key:key, kind, name:f.name, url:publicUrl });
+        const existing = await sb.select('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`);
+        if(existing && existing.length>0) await sb.update('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`, { name:f.name, url:publicUrl });
+        else await sb.insert('task_assets', { task_key:key, kind, name:f.name, url:publicUrl });
       } catch(e){ console.log('task_assets 동기화 실패 (Supabase에 task_assets 테이블이 없으면 로컬에만 저장됩니다):', e); }
-      showNotif('📎 등록 완료', `${f.name} 이(가) 연결됐어요.`);
+      showNotif('📎 등록 완료', `${f.name} 이(가) 연결됐어요. (본사 업로드 — 현장 담당자는 다운로드만 가능)`);
+      if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
     } catch(err){
       console.log('업무별 파일 업로드 오류:', err);
       store[key] = { name:f.name, url:null, updatedAt:Date.now() };
@@ -4710,6 +4980,22 @@ async function removeTaskAsset(key, kind){
   try { await sb.delete('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`); } catch(e){}
   showNotif('🗑️ 삭제됨', `연결된 파일이 삭제되고 예시 상태로 돌아갔어요.`);
   if(tiCtx) openTaskModal(tiCtx.discKey, tiCtx.catIdx, tiCtx.taskIdx, tiCtx.siteId);
+  if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
+}
+
+// Supabase task_assets 테이블에서 업무별 양식/지침 전체 불러오기 (다른 기기/사용자가 올린 파일도 반영)
+async function loadTaskAssetsFromSupabase(){
+  try {
+    const rows = await sb.select('task_assets', '?order=created_at');
+    if(!rows || !rows.length) return;
+    rows.forEach(row=>{
+      const store = row.kind==='form' ? taskForms : taskGuides;
+      store[row.task_key] = { name: row.name, url: row.url, updatedAt: row.created_at ? new Date(row.created_at).getTime() : Date.now() };
+    });
+    saveState();
+    console.log(`task_assets 로드: ${rows.length}건`);
+    if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
+  } catch(e) { console.log('task_assets 불러오기 실패 (테이블이 없으면 로컬 데이터만 사용됩니다):', e); }
 }
 
 // ════════════════════════════
@@ -4893,6 +5179,7 @@ function renderMgrProcessMap(curDm){
   const tbl = document.getElementById('mgr-process-table');
   const siteId = currentUser?.siteIds?.[0] ?? 0;
   const site   = sites[siteId];
+  syncStageOverdue(site);
   const schedule = getSiteSchedule(siteId);
   const siteTasks = site?.tasks || [];
   const startVal = site?.start || new Date().toISOString().split('T')[0];
@@ -5048,12 +5335,16 @@ function renderMgrProcessMap(curDm){
                          st==='ontrack'?'<span class="badge ontrack">● 진행중</span>':'';
             }
           } else {
-            // 기계 등: D월 기준 자동 계산
-            // dm < curDm → 지연, dm === curDm → 진행중, dm > curDm → 예정
-            st = dm < curDm ? 'overdue' : dm === curDm ? 'ontrack' : 'pending';
-            badgeTxt = st==='overdue' ? '<span class="badge overdue">! 지연</span>':
+            // 건축/기계/건축토목/조경: 공정 현황 탭과 동일하게 실제 저장된 업무 상태(taskStatus)를 그대로 반영
+            const taskIdx0 = cat.tasks.indexOf(task);
+            const key = taskKey(disc.key, ci, taskIdx0);
+            const t = getDiscTaskStatus(site, key, task);
+            st = t.st;
+            badgeTxt = st==='done' ? '<span class="badge done">✓ 완료</span>':
                        st==='ontrack' ? '<span class="badge ontrack">● 진행중</span>':
-                       '';  // 예정: 배지 없음
+                       st==='overdue' ? '<span class="badge overdue">! 지연</span>':
+                       st==='warning' ? '<span class="badge warning">⚠ 주의</span>': '';
+            if(t.file) fileHtml = '<span class="ftag yes">📎 제출</span>';
           }
 
           const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent','':'transparent'}[st]||'transparent';
@@ -5225,6 +5516,8 @@ function toggleFieldStageMgr(){
 
 function switchFieldTab(tab){
   const discMode = isDiscFieldMode();
+  const discTabs = document.getElementById('field-disc-tabs');
+  if(discTabs) discTabs.style.display = (currentUser?.role==='ADMIN') ? 'flex' : 'none';
   ['status','map'].forEach(t=>{
     document.getElementById(`ftab-${t}`)?.classList.toggle('active', t===tab);
   });
@@ -5291,6 +5584,7 @@ function setFieldDiscFilter(key){
 function renderFieldMap(curDm, filterKey){
   const siteId = parseInt(document.getElementById('field-sel')?.value ?? 0);
   const site = sites[siteId];
+  syncStageOverdue(site);
   const schedule = getSiteSchedule(siteId);
   const tbl = document.getElementById('field-process-table');
 
@@ -5373,12 +5667,14 @@ function renderFieldMap(curDm, filterKey){
 
         tasksHere.forEach(task=>{
           let st='pending', badgeTxt='', fileHtml='';
+          const taskIdx = cat.tasks.indexOf(task);
           if(disc.key==='elec'){
+            // 전기: 실제 STAGES 상태(공정 현황 탭과 같은 데이터)를 그대로 반영 — 마감일 기준으로 지연 판정
             const siteTask=getElecTaskSt(task.name);
             if(siteTask){
               st=siteTask.st;
-              if(st==='pending'&&dm<curDm) st='overdue';
-              if(st==='pending'&&dm===curDm) st='ontrack';
+              if(st!=='done' && dLeft(siteTask.deadline)<0) st='overdue';
+              else if(st==='pending' && dm===curDm) st='ontrack';
               if(st==='done') badgeTxt='<span class="badge done" style="font-size:10px">✓ 완료</span>';
               else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:10px">● 진행중</span>';
               else if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:10px">! 지연</span>';
@@ -5390,12 +5686,17 @@ function renderFieldMap(curDm, filterKey){
               else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:10px">● 진행중</span>';
             }
           } else {
-            st=dm<curDm?'overdue':dm===curDm?'ontrack':'pending';
-            if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:10px">! 지연</span>';
+            // 건축/기계/건축토목/조경: 공정 현황 탭과 동일하게 실제 저장된 업무 상태(taskStatus)를 그대로 반영
+            const key = taskKey(disc.key, ci, taskIdx);
+            const t = getDiscTaskStatus(site, key, task);
+            st = t.st;
+            if(st==='done') badgeTxt='<span class="badge done" style="font-size:10px">✓ 완료</span>';
             else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:10px">● 진행중</span>';
+            else if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:10px">! 지연</span>';
+            else if(st==='warning') badgeTxt='<span class="badge warning" style="font-size:10px">⚠ 주의</span>';
+            if(t.file) fileHtml='<span class="ftag yes" style="font-size:10px">📎</span>';
           }
           const bgSt={done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
-          const taskIdx = cat.tasks.indexOf(task);
           html+=`<div class="task-clickable" onclick="openTaskModal('${disc.key}',${ci},${taskIdx},${siteId})" style="background:${bgSt};border-radius:6px;padding:4px 6px;margin-bottom:3px;">
             <div style="font-size:11px;font-weight:700;color:var(--t1);line-height:1.4;word-break:keep-all">${task.name}</div>
             <div style="display:flex;gap:3px;flex-wrap:wrap">${badgeTxt}${fileHtml}</div>
