@@ -419,6 +419,10 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 
   <!-- 개요 (구 본사대시보드(건축), 공종별 일반화) -->
   <div id="hq-panel-overview" style="padding:16px 20px;">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+    <button class="tbtn" id="ha-summary-toggle-btn" onclick="toggleHaSummary()">▲ 현장공정·지연·임박 접기</button>
+  </div>
+  <div id="ha-summary-wrap">
   <div class="kpi-row">
     <div class="kpi"><div class="kpi-ico" style="background:rgba(49,94,251,.1)">🏢</div><div><div class="kpi-num" id="ha-kpi-sites">-</div><div class="kpi-lbl">관리 현장</div></div></div>
     <div class="kpi-vr"></div>
@@ -432,7 +436,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 
   <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;margin-bottom:14px">
     <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
-      <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:800;color:var(--t1)" id="ha-table-title">현장별 공정 비교</div>
+      <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:800;color:var(--t1)" id="ha-table-title">현장공정</div>
       <div style="overflow:auto">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:var(--surf2)">
@@ -457,10 +461,11 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       </div>
     </div>
   </div>
+  </div><!-- /ha-summary-wrap -->
 
   <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
     <div style="padding:13px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <span style="font-size:14px;font-weight:800;color:var(--t1)" id="ha-timeline-title">🗺️ 타임라인</span>
+      <span style="font-size:14px;font-weight:800;color:var(--t1)" id="ha-timeline-title">🗺️ 업무프로세스맵</span>
       <select id="ha-timeline-sel" class="site-sel" onchange="hqArchSiteId=parseInt(this.value);renderHqArchTimeline()" style="min-width:170px"></select>
       <span id="ha-timeline-dmonth" style="font-size:12px;font-weight:800;padding:4px 12px;border-radius:20px;background:rgba(49,94,251,.12);color:var(--acc)"></span>
     </div>
@@ -1198,15 +1203,26 @@ const sb = {
 // ════════════════════════════
 //  AUTH
 // ════════════════════════════
+// 실사용자 명단 (2026-09 반영) — Supabase users 테이블이 실제 로그인 기준이고, 이 배열은 오프라인 폴백용 사본
 const USERS = [
-  { id:'5943', pw:'5943', name:'관리자',          role:'ADMIN',   siteIds:[],  discipline:'', active:true },
-  { id:'1111', pw:'1111', name:'본사 전기담당자',  role:'HQ',      siteIds:[],  discipline:'전기', active:true },
-  { id:'0000', pw:'0000', name:'천안 통합현장소장', role:'MANAGER', siteIds:[0,1], discipline:'', active:true },
-  { id:'5555', pw:'5555', name:'5단지 전기담당',   role:'SITE',    siteIds:[0], discipline:'전기', active:true },
-  { id:'6666', pw:'6666', name:'6단지 전기담당',   role:'SITE',    siteIds:[1], discipline:'전기', active:true },
-  { id:'3333', pw:'3333', name:'3단지 전기담당',   role:'SITE',    siteIds:[2], discipline:'전기', active:true },
-  { id:'4444', pw:'4444', name:'4단지 전기담당',   role:'SITE',    siteIds:[3], discipline:'전기', active:true },
-  { id:'7777', pw:'7777', name:'5단지 건축담당',   role:'SITE',    siteIds:[0], discipline:'건축', active:true },
+  { id:'5466',    pw:'5466',    name:'김동훈', role:'ADMIN',   siteIds:[],    discipline:'',       active:true },
+  { id:'6044',    pw:'6044',    name:'박진우', role:'ADMIN',   siteIds:[],    discipline:'',       active:true },
+  { id:'4718',    pw:'4718',    name:'안상도', role:'SITE',    siteIds:[0],   discipline:'건축',     active:true },
+  { id:'6277',    pw:'6277',    name:'이재협', role:'SITE',    siteIds:[1],   discipline:'건축',     active:true },
+  { id:'5942',    pw:'5942',    name:'전주홍', role:'ADMIN',   siteIds:[],    discipline:'',       active:true },
+  { id:'5943',    pw:'5943',    name:'정유훈', role:'ADMIN',   siteIds:[],    discipline:'',       active:true },
+  { id:'4417',    pw:'4417',    name:'홍일화', role:'ADMIN',   siteIds:[],    discipline:'',       active:true },
+  { id:'5644',    pw:'5644',    name:'서원익', role:'MANAGER', siteIds:[0,1], discipline:'',       active:true },
+  { id:'3946',    pw:'3946',    name:'류강선', role:'MANAGER', siteIds:[0],   discipline:'',       active:true },
+  { id:'5773',    pw:'5773',    name:'노진석', role:'SITE',    siteIds:[0,1], discipline:'전기',     active:true },
+  { id:'6286',    pw:'6286',    name:'김종욱', role:'SITE',    siteIds:[0],   discipline:'기계',     active:true },
+  { id:'6561',    pw:'6561',    name:'임소민', role:'SITE',    siteIds:[0],   discipline:'건축',     active:true },
+  { id:'4921',    pw:'4921',    name:'박찬주', role:'SITE',    siteIds:[0,1], discipline:'건축토목',  active:true },
+  { id:'6550',    pw:'6550',    name:'이도언', role:'SITE',    siteIds:[1],   discipline:'건축',     active:true },
+  { id:'1101572', pw:'1101572', name:'김재원', role:'SITE',    siteIds:[1],   discipline:'기계',     active:true },
+  { id:'6348',    pw:'6348',    name:'고선영', role:'HQ',      siteIds:[],    discipline:'건축',     active:true },
+  { id:'6567',    pw:'6567',    name:'정지형', role:'HQ',      siteIds:[],    discipline:'전기',     active:true },
+  { id:'6846',    pw:'6846',    name:'변진호', role:'HQ',      siteIds:[],    discipline:'기계',     active:true },
 ];
 let currentUser = null;
 
@@ -2454,11 +2470,21 @@ function switchHqTab(tab){
 // 착공 전(비활성) 현장은 본사 대시보드에서도 숨김
 function activeSitesList(){ return sites.filter(s=>s.active!==false); }
 
+// 개요 탭 상단(KPI+현장공정+지연/임박)이 화면을 너무 많이 차지해서 아래 업무프로세스맵이 잘 안 보일 때 접어두는 토글
+let haSummaryCollapsed = false;
+function toggleHaSummary(){
+  haSummaryCollapsed = !haSummaryCollapsed;
+  const wrap = document.getElementById('ha-summary-wrap');
+  const btn = document.getElementById('ha-summary-toggle-btn');
+  if(wrap) wrap.style.display = haSummaryCollapsed ? 'none' : '';
+  if(btn) btn.textContent = haSummaryCollapsed ? '▼ 현장공정·지연·임박 펼치기' : '▲ 현장공정·지연·임박 접기';
+}
+
 function renderHqArch(){
   const list = activeSitesList();
   if(!list.find(s=>s.id===hqArchSiteId)) hqArchSiteId = list[0]?.id ?? 0;
   const titleEl = document.getElementById('ha-table-title');
-  if(titleEl) titleEl.textContent = hqDisc ? `현장별 ${hqDiscName(hqDisc)} 공정 비교` : '현장별 전체 공정 비교 (5개 공종 합산)';
+  if(titleEl) titleEl.textContent = '현장공정';
   renderHqArchKpi();
   renderHqArchTable();
   renderHqArchLists();
@@ -2568,7 +2594,7 @@ function renderHqArchTimeline(){
   const discKey = hqDisc || 'elec';
   const discName = hqDiscName(discKey);
   const titleEl = document.getElementById('ha-timeline-title');
-  if(titleEl) titleEl.textContent = `🗺️ ${discName} 타임라인${hqDisc?'':' (전체 선택 시 전기 기준으로 표시)'}`;
+  if(titleEl) titleEl.textContent = `🗺️ 업무프로세스맵${hqDisc?'':' (전체 선택 시 전기 기준으로 표시)'}`;
   const schedule = getSiteSchedule(site.id);
   const disc = findDiscByName(schedule, discName);
   if(!disc){ tbl.innerHTML=`<tr><td style="padding:20px;text-align:center;color:var(--t3)">${discName} 데이터가 없습니다.</td></tr>`; return; }
