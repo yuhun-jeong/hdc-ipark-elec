@@ -1235,6 +1235,66 @@ const sb = {
     return res.ok;
   }
 };
+
+// ════════════════════════════
+//  GOOGLE DRIVE 파일 저장소
+//  (파일 업로드/다운로드만 Drive로 이전. 로그인·DB는 계속 Supabase 사용)
+//  구조: 브라우저 -> Apps Script(업로드 주소 발급) -> 브라우저가 Google로 파일 직접 전송
+//        큰 도면 파일도 중계서버 용량제한 없이 올라감
+// ════════════════════════════
+const DRIVE_API   = 'https://script.google.com/macros/s/AKfycbw1TXk1HSxL7F0E2_xiaYvvJdiBF1PaDwOqPB4k7l_TyqdAy9VmL374BYsFziixNYH62Q/exec';
+const DRIVE_TOKEN = 'Y1uA3W1o6rE5C-dWsUYxFwS41k5UxFSo';
+
+const drive = {
+  // Apps Script 호출 (Content-Type을 text/plain으로 둬야 CORS 사전요청이 안 생김)
+  async call(payload){
+    const res = await fetch(DRIVE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ token: DRIVE_TOKEN }, payload))
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'Drive 요청 실패');
+    return data;
+  },
+
+  // kind: 'form'(기준양식) | 'guide'(본사지침) | 'result'(현장 결과물, siteId 필요)
+  // 반환: 공개 다운로드 URL
+  async upload(kind, siteId, file){
+    const mime = file.type || 'application/octet-stream';
+    const s = await this.call({ action:'createUpload', kind, siteId, fileName:file.name, mimeType:mime });
+
+    let fileId = null;
+    try {
+      const put = await fetch(s.uploadUrl, { method:'PUT', headers:{ 'Content-Type': mime }, body:file });
+      const j = await put.json();
+      fileId = j.id || null;
+    } catch(e){
+      // 업로드는 됐지만 브라우저가 응답을 못 읽는 경우가 있음 -> 아래에서 태그로 파일을 찾는다
+      console.log('업로드 응답 확인 불가, 태그로 조회합니다:', e);
+    }
+
+    const fin = await this.call({ action:'finalize', fileId, tag:s.tag, kind, siteId });
+    return fin.downloadUrl;
+  },
+
+  // 저장된 URL에서 Drive 파일 ID 추출 (Drive 파일이 아니면 null)
+  fileIdOf(url){
+    if(!url) return null;
+    const u = String(url);
+    if(u.indexOf('drive.google.com') === -1 && u.indexOf('docs.google.com') === -1) return null;
+    const m = u.match(/[?&]id=([A-Za-z0-9_-]{20,})/) || u.match(/\/d\/([A-Za-z0-9_-]{20,})/);
+    return m ? m[1] : null;
+  },
+
+  // Drive 파일 삭제 (휴지통). Drive 파일이 아니면 false
+  async remove(url){
+    const id = this.fileIdOf(url);
+    if(!id) return false;
+    try { await this.call({ action:'remove', fileId:id }); return true; }
+    catch(e){ console.log('Drive 파일 삭제 오류:', e); return false; }
+  }
+};
 </script>
 <script>
 // ════════════════════════════
@@ -2753,9 +2813,8 @@ async function handleDiscCellFile(input){
   const fileName=file.name;
   showNotif('⬆ 업로드 중...',`${fileName} 업로드 중이에요.`);
   try {
-    const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path=`disc-status/${key}/${Date.now()}_${safeFileName}`;
-    const publicUrl = await sb.uploadFile('sample-files', path, file);
+    // Google Drive 03_현장결과물 > 해당 단지 폴더에 저장 (한글 파일명 그대로 유지)
+    const publicUrl = await drive.upload('result', siteId, file);
     t.file = fileName; t.fileUrl = publicUrl;
     if(t.st!=='done'){ t.st='done'; t.completed=fmt(today); }
     cellCurrentStatus='done'; updateStatusBtns('done');
@@ -2783,8 +2842,11 @@ async function removeDiscCellFile(){
   if(!t) return;
   if(t.fileUrl){
     try {
-      const pathMatch = t.fileUrl.match(/sample-files\/(.+)$/);
-      if(pathMatch) await sb.deleteFile('sample-files', pathMatch[1]);
+      const removed = await drive.remove(t.fileUrl);
+      if(!removed){ // Drive 이전에 올라간 기존 Supabase 파일
+        const pathMatch = t.fileUrl.match(/sample-files\/(.+)$/);
+        if(pathMatch) await sb.deleteFile('sample-files', pathMatch[1]);
+      }
     } catch(e){ console.log('Storage 공종파일 삭제 오류:', e); }
   }
   t.file=null; t.fileUrl=null;
@@ -4751,9 +4813,8 @@ async function uploadTaskAsset(key, kind){
     showNotif('⬆ 업로드 중...',`${f.name} 업로드 중이에요.`);
     const store = kind==='form' ? taskForms : taskGuides;
     try {
-      const safeFileName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `${kind}/${key}/${Date.now()}_${safeFileName}`;
-      const publicUrl = await sb.uploadFile('task-assets', path, f);
+      // Google Drive 01_기준양식 / 02_본사지침 폴더에 저장 (한글 파일명 그대로 유지)
+      const publicUrl = await drive.upload(kind, null, f);
       store[key] = { name:f.name, url:publicUrl, updatedAt:Date.now() };
       saveState();
       try {
@@ -4809,8 +4870,11 @@ async function removeTaskAsset(key, kind){
   if(!confirm(`"${cur.name}" 파일을 삭제할까요?`)) return;
   if(cur.url){
     try {
-      const m = cur.url.match(/task-assets\/(.+)$/);
-      if(m) await sb.deleteFile('task-assets', m[1]);
+      const removed = await drive.remove(cur.url);
+      if(!removed){ // Drive 이전에 올라간 기존 Supabase 파일
+        const m = cur.url.match(/task-assets\/(.+)$/);
+        if(m) await sb.deleteFile('task-assets', m[1]);
+      }
     } catch(e){ console.log('Storage 업무파일 삭제 오류:', e); }
   }
   delete store[key];
