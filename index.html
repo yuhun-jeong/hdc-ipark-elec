@@ -1260,9 +1260,10 @@ const drive = {
 
   // kind: 'form'(기준양식) | 'guide'(본사지침) | 'result'(현장 결과물, siteId 필요)
   // 반환: 공개 다운로드 URL
-  async upload(kind, siteId, file){
+  // saveName: Drive에 저장할 이름(생략하면 원본 파일명 그대로)
+  async upload(kind, siteId, file, saveName){
     const mime = file.type || 'application/octet-stream';
-    const s = await this.call({ action:'createUpload', kind, siteId, fileName:file.name, mimeType:mime });
+    const s = await this.call({ action:'createUpload', kind, siteId, fileName:(saveName || file.name), mimeType:mime });
 
     let fileId = null;
     try {
@@ -2814,7 +2815,7 @@ async function handleDiscCellFile(input){
   showNotif('⬆ 업로드 중...',`${fileName} 업로드 중이에요.`);
   try {
     // Google Drive 03_현장결과물 > 해당 단지 폴더에 저장 (한글 파일명 그대로 유지)
-    const publicUrl = await drive.upload('result', siteId, file);
+    const publicUrl = await drive.upload('result', siteId, file, driveFileName(key, fileName));
     t.file = fileName; t.fileUrl = publicUrl;
     if(t.st!=='done'){ t.st='done'; t.completed=fmt(today); }
     cellCurrentStatus='done'; updateStatusBtns('done');
@@ -4683,6 +4684,25 @@ function toggleTaskEditMode(){
 // 전공종 업무 고유 키 (건축·전기·기계·건축토목·조경 공통, 배열 위치 기반 — DISCIPLINES 구조가 코드에 고정돼 있어 안정적)
 function taskKey(discKey, catIdx, taskIdx){ return discKey+'-'+catIdx+'-'+taskIdx; }
 
+// 업무키('elec-3-12')로 업무명 찾기 — Drive에 저장할 파일명을 만들 때 씀
+function taskNameOfKey(key){
+  const m = String(key||'').match(/^([a-z]+)-(\d+)-(\d+)$/);
+  if(!m) return '';
+  const disc = DISCIPLINES.find(d=>d.key===m[1]);
+  const task = disc && disc.categories[+m[2]] && disc.categories[+m[2]].tasks[+m[3]];
+  return task ? task.name : '';
+}
+
+// Drive 폴더에서 어느 업무의 언제 파일인지 바로 알 수 있게 이름을 만든다.
+//   "착공서류준비_20260908_전기간선도.pdf"
+// 화면에 표시되는 이름은 원본 그대로라 사용자 입장에서는 달라지는 게 없다.
+function driveFileName(key, originalName){
+  const name = taskNameOfKey(key).replace(/[\\/:*?"<>|]/g, '-').trim().slice(0, 40);
+  const d = new Date();
+  const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  return (name ? name + '_' : '') + stamp + '_' + originalName;
+}
+
 // 현장 담당자는 양식/지침을 업로드가 아니라 다운로드만 받는 구조 — 강제 다운로드 시도(파일 형식에 따라 새 탭에서 열릴 수도 있음)
 function downloadTaskAsset(url, name){
   const a = document.createElement('a');
@@ -4814,7 +4834,7 @@ async function uploadTaskAsset(key, kind){
     const store = kind==='form' ? taskForms : taskGuides;
     try {
       // Google Drive 01_기준양식 / 02_본사지침 폴더에 저장 (한글 파일명 그대로 유지)
-      const publicUrl = await drive.upload(kind, null, f);
+      const publicUrl = await drive.upload(kind, null, f, driveFileName(key, f.name));
       store[key] = { name:f.name, url:publicUrl, updatedAt:Date.now() };
       saveState();
       try {
