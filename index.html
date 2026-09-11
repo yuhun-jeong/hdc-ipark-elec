@@ -988,13 +988,10 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <div class="upload-zone" id="cell-zone" onclick="document.getElementById('cell-file').click()" style="border:1.5px dashed var(--bd2);border-radius:8px;padding:16px;text-align:center;cursor:pointer;">
           <div style="font-size:20px;margin-bottom:5px">⬆️</div>
           <div style="font-size:12px;color:var(--t2)">결과물 업로드</div>
-          <div style="font-size:11px;color:var(--t3);margin-top:3px">클릭하여 파일 선택</div>
-          <input type="file" id="cell-file" style="display:none" onchange="handleCellFile(this)">
+          <div style="font-size:11px;color:var(--t3);margin-top:3px">클릭하여 파일 선택 (여러 개 선택 가능)</div>
+          <input type="file" id="cell-file" multiple style="display:none" onchange="handleCellFile(this)">
         </div>
-        <div id="cell-file-row" style="display:none;align-items:center;gap:8px;background:var(--surf2);border-radius:6px;padding:8px 12px;margin-top:8px;">
-          <span>📎</span><span style="flex:1;font-size:12px;font-family:var(--mono)" id="cell-file-name">—</span>
-          <button style="background:none;border:none;color:var(--t3);cursor:pointer" onclick="removeCellFile()">✕</button>
-        </div>
+        <div id="cell-file-list" style="display:none;flex-direction:column;gap:6px;margin-top:8px;"></div>
       </div>
     </div>
     <div class="popup-foot">
@@ -2354,19 +2351,21 @@ function openDiscCell(siteId, discKey, catIdx, taskIdx){
   document.getElementById('cell-date').value = t.deadline;
   document.getElementById('cell-memo').value = t.memo||'';
   updateStatusBtns(t.st||'pending');
-  const zone=document.getElementById('cell-zone');
-  const fileRow=document.getElementById('cell-file-row');
-  if(t.file){ zone.style.display='none'; fileRow.style.display='flex'; document.getElementById('cell-file-name').textContent=t.file; }
-  else{ zone.style.display='block'; fileRow.style.display='none'; }
+  document.getElementById('cell-zone').style.display='block';
+  renderCellFiles();
   document.getElementById('ov-cell').classList.add('open');
 }
 
 // 공종 업무 상태 → Supabase 동기화 (disc_task_status 테이블이 없으면 조용히 실패, 로컬엔 항상 저장됨)
-async function saveDiscStatusToSupabase(siteId, key, status, memo, fileName, deadline){
+async function saveDiscStatusToSupabase(siteId, key, status, memo, files, deadline){
   try {
+    // files 는 [{name,url}] 배열. 예전 호출부가 파일명 문자열 하나를 넘기던 것도 그대로 받아준다.
+    const list = Array.isArray(files) ? files : (files ? [{ name:files, url:null }] : []);
     const data = {
       site_id: siteId+1, task_key:key, status, memo:memo||'',
-      file_name: fileName||null, deadline: deadline||null,
+      file_name: list.length ? list[0].name : null,   // 기존 컬럼 — 첫 파일명 유지 (제출 뱃지용)
+      files: list,                                     // 전체 목록 (이름 + 다운로드 주소)
+      deadline: deadline||null,
       updated_by: currentUser?.id||'', updated_at: new Date().toISOString()
     };
     const existing = await sb.select('disc_task_status', `?site_id=eq.${siteId+1}&task_key=eq.${key}`);
@@ -2391,6 +2390,8 @@ async function loadDiscStatusFromSupabase(){
         st: row.status || cur.st || 'pending',
         memo: row.memo ?? cur.memo ?? '',
         file: row.file_name ?? cur.file ?? null,
+        files: Array.isArray(row.files) ? row.files : (cur.files || null),
+        fileUrl: (Array.isArray(row.files) && row.files.length) ? (row.files[0].url||null) : (cur.fileUrl ?? null),
         deadline: row.deadline || cur.deadline,
       };
     });
@@ -2803,8 +2804,46 @@ function toggleCellReason(){
   const changed=document.getElementById('cell-date').value!==focusedCell.origDeadline;
   document.getElementById('cell-reason-row').style.display=changed?'':'none';
 }
+// ── 현장 결과물 첨부 (업무 1건에 여러 개) ──────────────────────
+// 예전에는 t.file / t.fileUrl 에 1개만 담았다. 지금은 t.files 배열이 정본이고,
+// t.file / t.fileUrl 은 "제출 여부" 뱃지를 그리는 기존 코드들이 그대로 돌도록 첫 번째 파일을 비춰둔다.
+function resultFiles(t){
+  if(!t) return [];
+  if(Array.isArray(t.files)) return t.files.filter(f=>f && f.name);
+  return t.file ? [{ name:t.file, url:t.fileUrl||null }] : [];
+}
+function setResultFiles(t, list){
+  const arr = (list||[]).filter(f=>f && f.name);
+  t.files = arr;
+  t.file = arr.length ? arr[0].name : null;
+  t.fileUrl = arr.length ? (arr[0].url||null) : null;
+}
+
+// 셀 팝업의 첨부 목록 다시 그리기
+function renderCellFiles(){
+  const box = document.getElementById('cell-file-list');
+  if(!box || !focusedCell) return;
+  const t = sites[focusedCell.siteId]?.taskStatus?.[focusedCell.key];
+  const list = resultFiles(t);
+  if(!list.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='flex';
+  box.innerHTML = list.map((f,i)=>{
+    const safeName = (f.name||'').replace(/"/g,'&quot;');
+    const jsName = (f.name||'').replace(/'/g,"\\'");
+    const dl = f.url
+      ? `<button title="다운로드" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)" onclick="downloadTaskAsset('${f.url}','${jsName}')">⬇</button>`
+      : `<span style="font-size:10px;color:var(--t3)">링크없음</span>`;
+    return `<div style="display:flex;align-items:center;gap:8px;background:var(--surf2);border-radius:6px;padding:8px 12px;">
+      <span>📎</span>
+      <span title="${safeName}" style="flex:1;font-size:12px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</span>
+      ${dl}
+      <button title="삭제" style="background:none;border:none;color:var(--t3);cursor:pointer" onclick="removeDiscCellFile(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
 async function handleCellFile(input){
-  if(!input.files[0]||!focusedCell) return;
+  if(!input.files||!input.files.length||!focusedCell) return;
   await handleDiscCellFile(input);
 }
 // 공종 업무(disc) 파일 업로드/삭제 — 전기 포함 5개 공종 전체가 공통으로 쓰는 경로
@@ -2812,58 +2851,68 @@ async function handleDiscCellFile(input){
   const {siteId,key}=focusedCell;
   const site=sites[siteId];
   const t=site.taskStatus[key];
-  const file=input.files[0];
-  const fileName=file.name;
-  showNotif('⬆ 업로드 중...',`${fileName} 업로드 중이에요.`);
-  try {
-    // Google Drive 03_현장결과물 > 해당 단지 폴더에 저장 (한글 파일명 그대로 유지)
-    const publicUrl = await drive.upload('result', siteId, file, driveFileName(key, fileName));
-    t.file = fileName; t.fileUrl = publicUrl;
-    if(t.st!=='done'){ t.st='done'; t.completed=fmt(today); }
-    cellCurrentStatus='done'; updateStatusBtns('done');
-    document.getElementById('cell-zone').style.display='none';
-    document.getElementById('cell-file-row').style.display='flex';
-    document.getElementById('cell-file-name').textContent=fileName;
-    saveState();
-    saveDiscStatusToSupabase(siteId, key, 'done', t.memo||'', fileName, t.deadline);
-    updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ();
-    showNotif('📎 업로드 완료',`${document.getElementById('cell-title').textContent} 결과물이 등록됐어요.`);
-  } catch(e){
-    console.log('공종 업무 파일 업로드 오류:', e);
-    t.file = fileName;
-    document.getElementById('cell-zone').style.display='none';
-    document.getElementById('cell-file-row').style.display='flex';
-    document.getElementById('cell-file-name').textContent=fileName;
-    saveState();
-    showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
+  const files=Array.from(input.files||[]);
+  if(!files.length) return;
+  let ok=0, fail=0;
+  for(let i=0;i<files.length;i++){
+    const file=files[i];
+    showNotif('⬆ 업로드 중...', files.length>1 ? `${i+1}/${files.length} — ${file.name}` : `${file.name} 업로드 중이에요.`);
+    try {
+      // Google Drive 03_현장결과물 > 해당 단지 폴더에 저장 (한글 파일명 그대로 유지)
+      const publicUrl = await drive.upload('result', siteId, file, driveFileName(key, file.name));
+      const list = resultFiles(t);
+      list.push({ name:file.name, url:publicUrl, uploadedAt:Date.now() });
+      setResultFiles(t, list);
+      ok++;
+    } catch(e){
+      console.log('공종 업무 파일 업로드 오류:', file.name, e);
+      // 업로드는 실패해도 파일명은 남겨서 무엇을 올리려 했는지 보이게 한다
+      const list = resultFiles(t);
+      list.push({ name:file.name, url:null, uploadedAt:Date.now() });
+      setResultFiles(t, list);
+      fail++;
+    }
   }
+  if(ok && t.st!=='done'){ t.st='done'; t.completed=fmt(today); cellCurrentStatus='done'; updateStatusBtns('done'); }
+  renderCellFiles();
+  saveState();
+  saveDiscStatusToSupabase(siteId, key, t.st, t.memo||'', resultFiles(t), t.deadline);
+  updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ();
+  if(ok && !fail)      showNotif('📎 업로드 완료',`${document.getElementById('cell-title').textContent} 결과물 ${ok}개가 등록됐어요.`);
+  else if(ok && fail)  showNotif('📎 일부 완료',`${ok}개 등록, ${fail}개는 파일명만 등록됐어요.`);
+  else                 showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
+  input.value='';
 }
-async function removeDiscCellFile(){
+async function removeDiscCellFile(idx){
   const {siteId,key}=focusedCell;
   const site=sites[siteId];
   const t=site.taskStatus[key];
   if(!t) return;
-  if(t.fileUrl){
+  const list = resultFiles(t);
+  const cur = list[idx];
+  if(!cur) return;
+  if(!confirm(`"${cur.name}" 을(를) 삭제할까요?`)) return;
+  if(cur.url){
     try {
-      const removed = await drive.remove(t.fileUrl);
+      const removed = await drive.remove(cur.url);
       if(!removed){ // Drive 이전에 올라간 기존 Supabase 파일
-        const pathMatch = t.fileUrl.match(/sample-files\/(.+)$/);
+        const pathMatch = cur.url.match(/sample-files\/(.+)$/);
         if(pathMatch) await sb.deleteFile('sample-files', pathMatch[1]);
       }
     } catch(e){ console.log('Storage 공종파일 삭제 오류:', e); }
   }
-  t.file=null; t.fileUrl=null;
-  document.getElementById('cell-zone').style.display='block';
-  document.getElementById('cell-file-row').style.display='none';
+  list.splice(idx,1);
+  setResultFiles(t, list);
+  renderCellFiles();
   saveState();
-  saveDiscStatusToSupabase(siteId, key, t.st, t.memo||'', null, t.deadline);
+  saveDiscStatusToSupabase(siteId, key, t.st, t.memo||'', resultFiles(t), t.deadline);
   updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ();
-  showNotif('🗑️ 파일 삭제','결과물 파일이 삭제됐어요.');
+  showNotif('🗑️ 파일 삭제', list.length ? `"${cur.name}" 을(를) 지웠어요. (남은 첨부 ${list.length}개)` : '결과물 파일이 삭제됐어요.');
 }
 
-async function removeCellFile(){
+async function removeCellFile(idx){
   if(!focusedCell) return;
-  await removeDiscCellFile();
+  await removeDiscCellFile(idx||0);
 }
 // 현재 선택된 상태
 let cellCurrentStatus = 'pending';
@@ -2910,7 +2959,7 @@ function saveDiscCellDate(){
   t.deadline=newDate; t.memo=newMemo; t.st=newSt;
   if(newSt==='done' && !t.completed) t.completed=fmt(today);
   saveState();
-  saveDiscStatusToSupabase(siteId, key, newSt, newMemo, t.file||null, newDate);
+  saveDiscStatusToSupabase(siteId, key, newSt, newMemo, resultFiles(t), newDate);
   updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ(); closeAll();
   showNotif('💾 저장 완료','공정 상태가 업데이트됐어요.');
 }
