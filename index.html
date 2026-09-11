@@ -1950,8 +1950,10 @@ const stageGuides = STAGES.map(()=>[]);
 // ── 전공종 프로세스맵 업무별 관련양식/관련지침 (건축·전기·기계·건축토목·조경 전체)
 // key: `${discKey}-${catIdx}-${taskIdx}` (전기는 stage 단위 'stage-N'). 값이 없으면 "미등록"으로 표시하고,
 // 본사/관리자가 업로드(파일) 또는 URL 연결하면 taskForms/taskGuides에 저장됨.
-let taskForms  = {}; // taskKey -> {name,url,updatedAt}
-let taskGuides = {}; // taskKey -> {name,url,updatedAt}
+// 한 업무에 양식/지침을 여러 개 걸 수 있음 -> taskKey -> [{name,url,updatedAt}, ...]
+// (예전 버전이 저장한 단일 객체 {name,url}도 assetList()가 알아서 배열로 읽어줌)
+let taskForms  = {}; // taskKey -> [{name,url,updatedAt}]
+let taskGuides = {}; // taskKey -> [{name,url,updatedAt}]
 
 // ════════════════════════════
 //  로컬 저장 (임시 영속성 - localStorage)
@@ -4715,42 +4717,75 @@ function downloadTaskAsset(url, name){
   a.remove();
 }
 
+// 양식/지침은 여러 개 등록될 수 있다. 저장된 값이 예전 단일 객체든 새 배열이든
+// 항상 배열로 꺼내 쓰기 위한 도우미.
+function assetList(kind, key){
+  const store = kind==='form' ? taskForms : taskGuides;
+  const v = store[key];
+  if(!v) return [];
+  if(Array.isArray(v)) return v.filter(a=>a && a.url);
+  return v.url ? [v] : [];
+}
+function setAssetList(kind, key, list){
+  const store = kind==='form' ? taskForms : taskGuides;
+  if(list && list.length) store[key] = list;
+  else delete store[key];
+}
+
 // 현장담당자 화면(공정 현황 매트릭스) 전용 — 관리자가 이 화면을 보고 있어도 항상 보기 전용.
 // "예시" 문구 없이, 실제 등록된 파일만 다운로드로 보여주고 없으면 "미등록"만 표시. 업로드는 공종별 프로세스맵의 업무 상세 팝업에서만.
 function renderTaskAssetView(key, kind, task){
-  const store = kind==='form' ? taskForms : taskGuides;
-  const asset = store[key];
-  if(!asset || !asset.url){
+  const list = assetList(kind, key);
+  if(!list.length){
     return `<span style="font-size:10px;color:var(--t3)">— 미등록</span>`;
   }
-  const safeName = (asset.name||'').replace(/"/g,'&quot;');
-  return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:130px">
-    <div title="${safeName}" style="font-size:10px;font-weight:700;color:var(--t1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${asset.name}</div>
-    <button onclick="downloadTaskAsset('${asset.url}','${(asset.name||'').replace(/'/g,"\\'")}')" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 8px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">⬇ 다운로드</button>
-  </div>`;
+  const rows = list.map(a=>{
+    const safeName = (a.name||'').replace(/"/g,'&quot;');
+    const jsName = (a.name||'').replace(/'/g,"\\'");
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:100%">
+      <div title="${safeName}" style="font-size:10px;font-weight:700;color:var(--t1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.name}</div>
+      <button onclick="downloadTaskAsset('${a.url}','${jsName}')" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 8px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">⬇ 다운로드</button>
+    </div>`;
+  }).join('');
+  const countBadge = list.length>1
+    ? `<div style="font-size:9px;font-weight:800;color:var(--t3)">첨부 ${list.length}개</div>` : '';
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;max-width:130px">${countBadge}${rows}</div>`;
 }
 
 function renderTaskAsset(key, kind, task){
-  const store = kind==='form' ? taskForms : taskGuides;
-  const asset = store[key];
-  const hasAsset = !!(asset && asset.url);
+  const list = assetList(kind, key);
   const isAdmin = currentUser && (currentUser.role==='HQ'||currentUser.role==='ADMIN');
   const icon = kind==='form' ? '📄' : '📌';
-  // 파일명이 길어도(업무명이 긴 기계·건축 등) 칸이 가로로 늘어나지 않도록 한 줄로 말줄임(전체 이름은 title 툴팁)
-  const nameHtml = hasAsset
-    ? `<div title="${(asset.name||'').replace(/"/g,'&quot;')}" style="font-size:10px;font-weight:700;color:var(--t1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon} ${asset.name}</div>`
-    : `<div style="font-size:10px;color:var(--t3);font-weight:600">— 미등록</div>`;
-  const openBtn = hasAsset
-    ? `<button onclick="downloadTaskAsset('${asset.url}','${(asset.name||'').replace(/'/g,"\\'")}')" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">⬇ 다운로드</button>` : '';
-  const editBtn = isAdmin
-    ? `<button onclick="uploadTaskAsset('${key}','${kind}')" style="background:rgba(49,94,251,.12);color:#315efb;border:1px solid rgba(49,94,251,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">${hasAsset?'교체':'업로드'}</button>` : '';
-  const urlBtn = isAdmin
-    ? `<button onclick="linkTaskAssetUrl('${key}','${kind}')" style="background:rgba(16,185,129,.1);color:var(--g);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">🔗 URL</button>` : '';
-  const delBtn = (isAdmin && hasAsset)
-    ? `<button onclick="removeTaskAsset('${key}','${kind}')" style="background:transparent;color:var(--r);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)">삭제</button>` : '';
-  return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:130px">
-    ${nameHtml}
-    <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center">${openBtn}${editBtn}${urlBtn}${delBtn}</div>
+  const btnBase = 'border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;cursor:pointer;font-family:var(--sans)';
+
+  // 등록된 파일/링크를 한 줄씩. 파일명이 길어도 칸이 늘어나지 않게 한 줄 말줄임(전체 이름은 툴팁).
+  const rows = list.map((a,i)=>{
+    const safeName = (a.name||'').replace(/"/g,'&quot;');
+    const jsName = (a.name||'').replace(/'/g,"\\'");
+    const delBtn = isAdmin
+      ? `<button onclick="removeTaskAsset('${key}','${kind}',${i})" title="이 첨부만 삭제" style="background:transparent;color:var(--r);border:1px solid rgba(239,68,68,.3);${btnBase}">✕</button>` : '';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;width:100%">
+      <div title="${safeName}" style="font-size:10px;font-weight:700;color:var(--t1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon} ${a.name}</div>
+      <div style="display:flex;gap:3px;justify-content:center">
+        <button onclick="downloadTaskAsset('${a.url}','${jsName}')" style="background:var(--bb);color:var(--acc);border:1px solid rgba(49,94,251,.3);${btnBase}">⬇ 다운로드</button>
+        ${delBtn}
+      </div>
+    </div>`;
+  }).join('');
+
+  const emptyHtml = list.length ? '' : `<div style="font-size:10px;color:var(--t3);font-weight:600">— 미등록</div>`;
+  const countBadge = list.length>1
+    ? `<div style="font-size:9px;font-weight:800;color:var(--t3)">첨부 ${list.length}개</div>` : '';
+
+  // 본사/관리자는 몇 개든 계속 추가할 수 있다 (교체가 아니라 추가)
+  const addBtns = isAdmin
+    ? `<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:2px">
+        <button onclick="uploadTaskAsset('${key}','${kind}')" style="background:rgba(49,94,251,.12);color:#315efb;border:1px solid rgba(49,94,251,.3);${btnBase}">＋ 파일</button>
+        <button onclick="linkTaskAssetUrl('${key}','${kind}')" style="background:rgba(16,185,129,.1);color:var(--g);border:1px solid rgba(16,185,129,.3);${btnBase}">＋ URL</button>
+      </div>` : '';
+
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;max-width:130px">
+    ${countBadge}${emptyHtml}${rows}${addBtns}
   </div>`;
 }
 
@@ -4827,30 +4862,34 @@ async function uploadTaskAsset(key, kind){
   if(!currentUser||!(currentUser.role==='HQ'||currentUser.role==='ADMIN')) return;
   const input=document.createElement('input');
   input.type='file';
+  input.multiple=true;   // 지침·샘플이 여러 장인 업무가 있어 한 번에 여러 개 선택 가능
   input.onchange=async e=>{
-    const f=e.target.files[0];
-    if(!f) return;
-    showNotif('⬆ 업로드 중...',`${f.name} 업로드 중이에요.`);
-    const store = kind==='form' ? taskForms : taskGuides;
-    try {
-      // Google Drive 01_기준양식 / 02_본사지침 폴더에 저장 (한글 파일명 그대로 유지)
-      const publicUrl = await drive.upload(kind, null, f, driveFileName(key, f.name));
-      store[key] = { name:f.name, url:publicUrl, updatedAt:Date.now() };
-      saveState();
+    const files=Array.from(e.target.files||[]);
+    if(!files.length) return;
+    let ok=0, fail=0;
+    for(let i=0;i<files.length;i++){
+      const f=files[i];
+      showNotif('⬆ 업로드 중...', files.length>1 ? `${i+1}/${files.length} — ${f.name}` : `${f.name} 업로드 중이에요.`);
       try {
-        const existing = await sb.select('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`);
-        if(existing && existing.length>0) await sb.update('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`, { name:f.name, url:publicUrl });
-        else await sb.insert('task_assets', { task_key:key, kind, name:f.name, url:publicUrl });
-      } catch(e){ console.log('task_assets 동기화 실패 (Supabase에 task_assets 테이블이 없으면 로컬에만 저장됩니다):', e); }
-      showNotif('📎 등록 완료', `${f.name} 이(가) 연결됐어요. (본사 업로드 — 현장 담당자는 다운로드만 가능)`);
-      if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
-      if(document.getElementById('view-hq')?.classList.contains('active')) renderHQ();
-    } catch(err){
-      console.log('업무별 파일 업로드 오류:', err);
-      store[key] = { name:f.name, url:null, updatedAt:Date.now() };
-      saveState();
-      showNotif('📎 등록(로컬)', `파일명만 등록됐어요.`);
+        // Google Drive 01_기준양식 / 02_본사지침 폴더에 저장 (한글 파일명 그대로 유지)
+        const publicUrl = await drive.upload(kind, null, f, driveFileName(key, f.name));
+        const list = assetList(kind, key);
+        list.push({ name:f.name, url:publicUrl, updatedAt:Date.now() });
+        setAssetList(kind, key, list);
+        saveState();
+        try {
+          await sb.insert('task_assets', { task_key:key, kind, name:f.name, url:publicUrl });
+        } catch(e){ console.log('task_assets 동기화 실패 (Supabase에 task_assets 테이블이 없으면 로컬에만 저장됩니다):', e); }
+        ok++;
+      } catch(err){
+        console.log('업무별 파일 업로드 오류:', f.name, err);
+        fail++;
+      }
     }
+    if(ok) showNotif('📎 등록 완료', `${ok}개 파일이 연결됐어요.${fail?` (${fail}개 실패)`:''} (본사 업로드 — 현장 담당자는 다운로드만 가능)`);
+    else   showNotif('⚠ 업로드 실패', `${fail}개 파일 모두 실패했어요. 잠시 후 다시 시도해주세요.`);
+    if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
+    if(document.getElementById('view-hq')?.classList.contains('active')) renderHQ();
     if(tiCtx) openTaskModal(tiCtx.discKey, tiCtx.catIdx, tiCtx.taskIdx, tiCtx.siteId);
   };
   input.click();
@@ -4859,21 +4898,19 @@ async function uploadTaskAsset(key, kind){
 // 업무별 관련양식/관련지침에 파일 대신 URL을 바로 연결(본사/관리자만) — 파일 업로드가 번거로운 외부 링크·공유 문서용
 async function linkTaskAssetUrl(key, kind){
   if(!currentUser||!(currentUser.role==='HQ'||currentUser.role==='ADMIN')) return;
-  const store = kind==='form' ? taskForms : taskGuides;
-  const cur = store[key];
-  const url = prompt('연결할 URL을 입력하세요:', (cur && cur.url) || '');
+  const url = prompt('연결할 URL을 입력하세요:', '');
   if(url===null) return;
   const trimmedUrl = url.trim();
   if(!trimmedUrl){ showNotif('⚠ 입력 오류','URL을 입력해주세요.'); return; }
-  const name = prompt('목록에 표시할 이름을 입력하세요:', (cur && cur.name) || '관련 지침 링크');
+  const name = prompt('목록에 표시할 이름을 입력하세요:', kind==='form' ? '관련 양식 링크' : '관련 지침 링크');
   if(name===null) return;
-  const trimmedName = name.trim() || '관련 지침 링크';
-  store[key] = { name: trimmedName, url: trimmedUrl, updatedAt: Date.now() };
+  const trimmedName = name.trim() || (kind==='form' ? '관련 양식 링크' : '관련 지침 링크');
+  const list = assetList(kind, key);
+  list.push({ name: trimmedName, url: trimmedUrl, updatedAt: Date.now() });
+  setAssetList(kind, key, list);
   saveState();
   try {
-    const existing = await sb.select('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`);
-    if(existing && existing.length>0) await sb.update('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`, { name:trimmedName, url:trimmedUrl });
-    else await sb.insert('task_assets', { task_key:key, kind, name:trimmedName, url:trimmedUrl });
+    await sb.insert('task_assets', { task_key:key, kind, name:trimmedName, url:trimmedUrl });
   } catch(e){ console.log('task_assets URL 연동 실패 (Supabase에 task_assets 테이블이 없으면 로컬에만 저장됩니다):', e); }
   showNotif('🔗 연결 완료', `${trimmedName} 링크가 연결됐어요. (본사 업로드 — 현장 담당자는 다운로드만 가능)`);
   if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
@@ -4882,12 +4919,12 @@ async function linkTaskAssetUrl(key, kind){
 }
 
 // 업무별 관련양식/관련지침 삭제 → 다시 미등록 상태로 되돌림 (본사/관리자만)
-async function removeTaskAsset(key, kind){
+async function removeTaskAsset(key, kind, idx){
   if(!currentUser||!(currentUser.role==='HQ'||currentUser.role==='ADMIN')) return;
-  const store = kind==='form' ? taskForms : taskGuides;
-  const cur = store[key];
+  const list = assetList(kind, key);
+  const cur = list[idx];
   if(!cur) return;
-  if(!confirm(`"${cur.name}" 파일을 삭제할까요?`)) return;
+  if(!confirm(`"${cur.name}" 을(를) 삭제할까요?`)) return;
   if(cur.url){
     try {
       const removed = await drive.remove(cur.url);
@@ -4897,10 +4934,12 @@ async function removeTaskAsset(key, kind){
       }
     } catch(e){ console.log('Storage 업무파일 삭제 오류:', e); }
   }
-  delete store[key];
+  list.splice(idx,1);
+  setAssetList(kind, key, list);
   saveState();
-  try { await sb.delete('task_assets', `?task_key=eq.${key}&kind=eq.${kind}`); } catch(e){}
-  showNotif('🗑️ 삭제됨', `연결된 파일이 삭제되고 미등록 상태로 돌아갔어요.`);
+  // 같은 업무에 여러 건이 있으므로 url까지 지정해서 그 한 줄만 지운다
+  try { await sb.delete('task_assets', `?task_key=eq.${encodeURIComponent(key)}&kind=eq.${kind}&url=eq.${encodeURIComponent(cur.url||'')}`); } catch(e){}
+  showNotif('🗑️ 삭제됨', list.length ? `"${cur.name}" 을(를) 지웠어요. (남은 첨부 ${list.length}개)` : `연결된 파일이 삭제되고 미등록 상태로 돌아갔어요.`);
   if(tiCtx) openTaskModal(tiCtx.discKey, tiCtx.catIdx, tiCtx.taskIdx, tiCtx.siteId);
   if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
   if(document.getElementById('view-hq')?.classList.contains('active')) renderHQ();
@@ -4911,13 +4950,20 @@ async function loadTaskAssetsFromSupabase(){
   try {
     const rows = await sb.select('task_assets', '?order=created_at');
     if(!rows || !rows.length) return;
+    // 한 업무에 여러 건이 올 수 있으므로 새로 모아서 통째로 교체 (중복 누적 방지)
+    const forms = {}, guides = {};
     rows.forEach(row=>{
-      const store = row.kind==='form' ? taskForms : taskGuides;
-      store[row.task_key] = { name: row.name, url: row.url, updatedAt: row.created_at ? new Date(row.created_at).getTime() : Date.now() };
+      const bucket = row.kind==='form' ? forms : guides;
+      (bucket[row.task_key] = bucket[row.task_key] || []).push({
+        name: row.name, url: row.url,
+        updatedAt: row.created_at ? new Date(row.created_at).getTime() : Date.now()
+      });
     });
+    taskForms = forms; taskGuides = guides;
     saveState();
     console.log(`task_assets 로드: ${rows.length}건`);
     if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
+    if(document.getElementById('view-hq')?.classList.contains('active')) renderHQ();
   } catch(e) { console.log('task_assets 불러오기 실패 (테이블이 없으면 로컬 데이터만 사용됩니다):', e); }
 }
 
