@@ -43,7 +43,6 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:13p
 /* HDC현대산업개발 CI — 밝은 배경용(짙은색) */
 .login-logo-ci{height:26px;width:auto;display:block;}
 .login-logo-txt{font-size:17px;font-weight:800;letter-spacing:-.03em;}
-.login-logo-sub{font-size:11px;color:var(--t3);font-weight:500;margin-top:1px;}
 .login-title{font-size:22px;font-weight:800;letter-spacing:-.04em;margin-bottom:6px;}
 .login-sub{font-size:13px;color:var(--t3);margin-bottom:28px;}
 .login-field{margin-bottom:14px;}
@@ -72,6 +71,9 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:13p
 .tbtn{height:34px;padding:0 15px;border-radius:10px;font-size:12px;font-weight:800;font-family:var(--sans);border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#dbe3f3;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap;}
 .tbtn:hover{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4);}
 .tbtn.pri{background:var(--acc);border-color:var(--acc);color:#fff;box-shadow:0 4px 12px rgba(49,94,251,.4);}
+/* 밝은 배경(개요 패널) 위에 놓이는 접기/펼치기 버튼 */
+.tbtn.onlight{background:var(--surf);border:1.5px solid var(--acc);color:var(--acc);font-weight:800;box-shadow:0 2px 6px rgba(49,94,251,.15);}
+.tbtn.onlight:hover{background:var(--acc);color:#fff;}
 .tbtn.pri:hover{background:#254ee0;}
 .tbtn.dng{color:#ff9296;border-color:rgba(255,146,150,.4);background:rgba(255,146,150,.08);}
 .tbtn.dng:hover{background:rgba(255,146,150,.16);}
@@ -111,10 +113,12 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:13p
 .tbl-outer{flex:1;min-height:0;border-radius:16px;border:1px solid var(--bd);overflow:hidden;box-shadow:var(--shadow);}
 .tbl-scroll{width:100%;height:100%;overflow:scroll;border-radius:16px;cursor:grab;background:var(--surf);}
 .tbl-scroll:active{cursor:grabbing;}
-.tbl-scroll::-webkit-scrollbar{width:8px;height:8px;}
-.tbl-scroll::-webkit-scrollbar-track{background:var(--surf2);}
-.tbl-scroll::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:5px;border:2px solid var(--surf2);}
+.tbl-scroll::-webkit-scrollbar{width:16px;height:18px;}
+.tbl-scroll::-webkit-scrollbar-track{background:var(--surf2);border-radius:9px;}
+.tbl-scroll::-webkit-scrollbar-thumb{background:#9aa7bd;border-radius:9px;border:3px solid var(--surf2);min-width:60px;min-height:60px;}
+.tbl-scroll::-webkit-scrollbar-thumb:hover{background:var(--acc);}
 .tbl-scroll::-webkit-scrollbar-corner{background:var(--surf2);}
+.tbl-scroll{scrollbar-width:auto;scrollbar-color:#9aa7bd var(--surf2);}
 table{border-collapse:collapse;width:max-content;min-width:100%;}
 /* 업무가 적은 공종(건축토목·조경 등)은 컬럼 수가 적어도 매트릭스가 강제로 화면 폭만큼 늘어나지 않고 내용 너비에 맞게만 표시 */
 #main-table,#field-table,#fd-table{min-width:0;}
@@ -350,10 +354,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <div class="login-card">
     <div class="login-logo">
       <img class="login-logo-ci" src="data:image/png;base64,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" alt="HDC현대산업개발">
-      <div>
-        <div class="login-logo-txt">Working Process Navigator</div>
-        <div class="login-logo-sub">HDC iPark 현장관리시스템</div>
-      </div>
+      <div class="login-logo-txt">Working Process Navigator</div>
     </div>
     <div class="login-title">로그인</div>
     <div class="login-sub">아이디와 비밀번호를 입력해주세요</div>
@@ -379,7 +380,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <div class="vr"></div>
   <div class="view-tabs" id="view-tabs-wrap">
     <button class="vtab active" id="vtab-hq" onclick="switchView('hq')">🏢 본사 대시보드</button>
-    <button class="vtab" id="vtab-manager" onclick="switchView('manager')" style="display:none">🏢 현장소장</button>
+    <button class="vtab" id="vtab-manager" onclick="switchView('manager')" style="display:none">🏢 현장 대시보드</button>
     <button class="vtab" id="vtab-procmap" onclick="switchView('procmap')" style="display:none">📋 공종별 프로세스맵</button>
     <button class="vtab" id="vtab-field" onclick="switchView('field')">👷 현장 담당자</button>
     <button class="vtab" id="vtab-admin" onclick="switchView('admin')" style="display:none">⚙️ 관리자</button>
@@ -422,7 +423,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <!-- 개요 (구 본사대시보드(건축), 공종별 일반화) -->
   <div id="hq-panel-overview" style="padding:16px 20px;">
   <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-    <button class="tbtn" id="ha-summary-toggle-btn" onclick="toggleHaSummary()">▲ 현장공정·지연·임박 접기</button>
+    <button class="tbtn onlight" id="ha-summary-toggle-btn" onclick="toggleHaSummary()">▲ 현장공정·지연·임박 접기</button>
   </div>
   <div id="ha-summary-wrap">
   <div class="kpi-row">
@@ -471,7 +472,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <select id="ha-timeline-sel" class="site-sel" onchange="hqArchSiteId=parseInt(this.value);renderHqArchTimeline()" style="min-width:170px"></select>
       <span id="ha-timeline-dmonth" style="font-size:12px;font-weight:800;padding:4px 12px;border-radius:20px;background:rgba(49,94,251,.12);color:var(--acc)"></span>
     </div>
-    <div style="overflow-x:auto;overflow-y:auto;max-height:60vh">
+    <div id="ha-timeline-scroll" style="overflow-x:auto;overflow-y:auto;max-height:60vh">
       <table id="ha-timeline-table" style="border-collapse:collapse;width:100%"></table>
     </div>
   </div>
@@ -602,8 +603,8 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         </label>
         <div id="mgr-dmonth-badge" style="font-size:15px;font-weight:800;padding:5px 18px;border-radius:20px;background:rgba(49,94,251,.12);color:var(--acc);">D+1</div>
         <button id="mgr-edit-toggle" onclick="toggleTaskEditMode()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">✏️ 항목 수정</button>
-        <button onclick="openMapQueueModal()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">📝 변경 이력·승인<span id="mgr-queue-badge" style="display:none;background:var(--r);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;"></span></button>
-        <button onclick="openSiteSettingModal()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">⚙️ 현장·마일스톤 설정</button>
+        <button id="mgr-queue-btn" onclick="openMapQueueModal()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">📝 변경 이력·승인<span id="mgr-queue-badge" style="display:none;background:var(--r);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;"></span></button>
+        <button id="mgr-setting-btn" onclick="openSiteSettingModal()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">⚙️ 현장·마일스톤 설정</button>
       </div>
     </div>
     <!-- 공종 카드 필터 -->
@@ -682,8 +683,8 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <!-- 관리자 전용: 공종 선택 카드 (각 공종 현장담당자 화면을 모두 열람, 공종별 프로세스맵의 공종카드와 동일한 톤) -->
   <div id="field-disc-tabs" style="display:none;gap:8px;background:var(--surf1);padding:12px 20px;flex-shrink:0;border-bottom:1px solid var(--bd);align-items:center;">
     <span style="font-size:11px;font-weight:800;color:var(--t3);letter-spacing:.04em;margin-right:2px">공종 보기</span>
-    <div class="fd-disc-card active" data-fd-disc="전기" onclick="setAdminFieldDiscipline('전기')" style="--dc:#315efb"><span class="fd-disc-dot"></span>전기</div>
-    <div class="fd-disc-card" data-fd-disc="건축" onclick="setAdminFieldDiscipline('건축')" style="--dc:#8b5cf6"><span class="fd-disc-dot"></span>건축</div>
+    <div class="fd-disc-card active" data-fd-disc="건축" onclick="setAdminFieldDiscipline('건축')" style="--dc:#8b5cf6"><span class="fd-disc-dot"></span>건축</div>
+    <div class="fd-disc-card" data-fd-disc="전기" onclick="setAdminFieldDiscipline('전기')" style="--dc:#315efb"><span class="fd-disc-dot"></span>전기</div>
     <div class="fd-disc-card" data-fd-disc="기계" onclick="setAdminFieldDiscipline('기계')" style="--dc:#f59e0b"><span class="fd-disc-dot"></span>기계</div>
     <div class="fd-disc-card" data-fd-disc="건축토목" onclick="setAdminFieldDiscipline('건축토목')" style="--dc:#06b6d4"><span class="fd-disc-dot"></span>건축토목</div>
     <div class="fd-disc-card" data-fd-disc="조경" onclick="setAdminFieldDiscipline('조경')" style="--dc:#16a34a"><span class="fd-disc-dot"></span>조경</div>
@@ -866,6 +867,19 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <div class="admin-section-sub">계정 추가 · 현장 배속 변경 · 비활성화</div>
       </div>
       <span id="admin-user-count" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
+    </div>
+    <!-- 검색/정렬 툴바는 테이블 밖에 둔다 — 테이블을 다시 그려도 입력 중인 검색어와 커서가 유지됨 -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0">
+      <input id="user-search" type="text" placeholder="🔍 아이디/이름/공종 검색"
+        style="border:1.5px solid var(--bd2);border-radius:6px;padding:6px 10px;font-size:12px;flex:1;min-width:160px;background:var(--bg);color:var(--t1)"
+        oninput="renderAdminUser()">
+      <select id="user-sort" style="border:1.5px solid var(--bd2);border-radius:6px;padding:6px 8px;font-size:12px;background:var(--bg);color:var(--t1)"
+        onchange="renderAdminUser()">
+        <option value="id">아이디순</option>
+        <option value="name">이름순</option>
+        <option value="role">권한순</option>
+        <option value="active">활성순</option>
+      </select>
     </div>
     <table class="admin-table" id="admin-user-table"></table>
     <div class="admin-form">
@@ -1054,7 +1068,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         </div>
         <button class="tbtn pri" onclick="proposeAddFromModal()">➕ 추가 제안</button>
       </div>
-      <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:6px">🕓 승인 대기중</div>
+      <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:6px" id="mq-pending-title">🕓 승인 대기중</div>
       <div id="mq-pending-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
       <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:6px">📜 처리 이력</div>
       <div id="mq-history-list" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1373,11 +1387,15 @@ async function doLogin(){
     document.getElementById('vtab-field').style.display='none';
     document.getElementById('vtab-admin').style.display='none';
     document.getElementById('topbtn-addsite').style.display='none';
+    applyMgrViewPermission();
     setTimeout(()=>{ switchView('manager'); renderManager(); }, 100);
   } else if(user.role==='SITE'){
+    // 현장담당자도 본인 현장의 '현장 대시보드'를 볼 수 있다 (보기 전용 — 현장설정·항목수정 버튼은 숨김)
+    document.getElementById('vtab-manager').style.display='';
     document.getElementById('vtab-hq').style.display='none';
     document.getElementById('vtab-admin').style.display='none';
     document.getElementById('topbtn-addsite').style.display='none';
+    applyMgrViewPermission();
     switchView('field');
     refreshFieldSel(null);
   } else if(user.role==='ADMIN'){
@@ -1388,6 +1406,7 @@ async function doLogin(){
     document.getElementById('vtab-field').style.display='';
     document.getElementById('vtab-admin').style.display='';
     document.getElementById('topbtn-addsite').style.display='';
+    applyMgrViewPermission();
     switchView('hq');
     refreshFieldSel(null);
   } else {
@@ -1398,6 +1417,7 @@ async function doLogin(){
     document.getElementById('vtab-field').style.display='';
     document.getElementById('vtab-admin').style.display='none';
     document.getElementById('topbtn-addsite').style.display='';
+    applyMgrViewPermission();
     switchView('hq');
     refreshFieldSel(null);
   }
@@ -1740,11 +1760,16 @@ function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 function fmtDisp(s){ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 let sites = [
-  { id:0, name:'천안아이파크 5단지', mgr:'김현장', start:'2026-04-15', status:'green', duration:34, basement:2, floors:35, taskStatus:{} },
-  { id:1, name:'천안아이파크 6단지', mgr:'이소장', start:'2026-04-15', status:'red',   duration:34, basement:3, floors:42, taskStatus:{} },
-  { id:2, name:'천안아이파크 3단지', mgr:'박담당', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, taskStatus:{}, active:false },
-  { id:3, name:'천안아이파크 4단지', mgr:'최현장', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, taskStatus:{}, active:false },
+  // 준공예정일(end)은 착공일 + 공기(duration, 개월) 기준
+  { id:0, name:'천안아이파크 5단지', mgr:'서원익', start:'2026-04-15', end:'2029-02-15', status:'green', duration:34, basement:2, floors:35, taskStatus:{} },
+  { id:1, name:'천안아이파크 6단지', mgr:'서원익', start:'2026-04-15', end:'2029-02-15', status:'red',   duration:34, basement:3, floors:42, taskStatus:{} },
+  { id:2, name:'천안아이파크 3단지', mgr:'이상훈', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, taskStatus:{}, active:false },
+  { id:3, name:'천안아이파크 4단지', mgr:'이상훈', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, taskStatus:{}, active:false },
 ];
+
+// 현장 이름·담당자·준공예정일은 코드가 기준이다. 브라우저에 저장된 예전 값이 남아 있어도
+// 아래 값으로 다시 맞춘다. (착공일·공기는 '현장 설정'에서 바꿀 수 있으므로 건드리지 않는다)
+const SITE_META = sites.map(s=>({ id:s.id, name:s.name, mgr:s.mgr, end:s.end }));
 
 let focusedCell=null;
 
@@ -2016,7 +2041,13 @@ function loadState(){
     return;
   }
   // USERS는 코드 기준으로만 관리
-  if(saved.sites)        sites=saved.sites;
+  if(saved.sites){
+    sites=saved.sites;
+    SITE_META.forEach(m=>{
+      const site = sites.find(x=>x.id===m.id);
+      if(site){ site.name=m.name; site.mgr=m.mgr; if(m.end) site.end=m.end; }
+    });
+  }
   if(saved.STAGES)       { STAGES.length=0; STAGES.push(...saved.STAGES); }
   if(saved.DOCS)         { DOCS.length=0; DOCS.push(...saved.DOCS); }
   if(saved.STAGE_CAT)    { STAGE_CAT.length=0; STAGE_CAT.push(...saved.STAGE_CAT); }
@@ -2032,7 +2063,7 @@ function loadState(){
 loadState();
 
 // 관리자가 "공정 현황" 탭에서 현재 보고 있는 공종 (관리자 전용 공종 선택 탭에서 바뀜)
-let adminFieldDiscipline = '전기';
+let adminFieldDiscipline = '건축';
 
 function setAdminFieldDiscipline(name){
   adminFieldDiscipline = name;
@@ -2580,8 +2611,11 @@ function toggleHaSummary(){
   haSummaryCollapsed = !haSummaryCollapsed;
   const wrap = document.getElementById('ha-summary-wrap');
   const btn = document.getElementById('ha-summary-toggle-btn');
+  const scroll = document.getElementById('ha-timeline-scroll');
   if(wrap) wrap.style.display = haSummaryCollapsed ? 'none' : '';
   if(btn) btn.textContent = haSummaryCollapsed ? '▼ 현장공정·지연·임박 펼치기' : '▲ 현장공정·지연·임박 접기';
+  // 접으면 업무프로세스맵이 남는 화면 높이를 전부 쓰도록 넓힌다
+  if(scroll) scroll.style.maxHeight = haSummaryCollapsed ? 'calc(100vh - 205px)' : '60vh';
 }
 
 function renderHqArch(){
@@ -3154,23 +3188,6 @@ function renderAdminUser(){
 
   userTable.innerHTML=`
     <thead>
-      <tr>
-        <th colspan="8" style="padding:8px 10px;background:var(--surf1)">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="user-search" type="text" placeholder="🔍 아이디/이름/공종 검색"
-              value="${searchVal}"
-              style="border:1.5px solid var(--bd2);border-radius:6px;padding:5px 10px;font-size:12px;flex:1;min-width:140px;background:var(--bg);color:var(--t1)"
-              oninput="renderAdminUser()">
-            <select id="user-sort" style="border:1.5px solid var(--bd2);border-radius:6px;padding:5px 8px;font-size:12px;background:var(--bg);color:var(--t1)"
-              onchange="renderAdminUser()">
-              <option value="id"     ${sortVal==='id'    ?'selected':''}>아이디순</option>
-              <option value="name"   ${sortVal==='name'  ?'selected':''}>이름순</option>
-              <option value="role"   ${sortVal==='role'  ?'selected':''}>권한순</option>
-              <option value="active" ${sortVal==='active'?'selected':''}>활성순</option>
-            </select>
-          </div>
-        </th>
-      </tr>
       <tr>
         <th>아이디</th><th>비밀번호</th><th>이름</th><th>공종</th><th>소속/권한</th><th>배속현장</th><th>상태</th><th>관리</th>
       </tr>
@@ -4556,14 +4573,22 @@ function applyMapChange(req){
   saveState();
 }
 
-// 변경 제안 등록 — 현장소장 본인이면 즉시 승인+반영, 아니면 대기 상태로 저장
+// ══════════════════════════════════════════════════════════
+//  현장소장 승인 절차 ON/OFF
+//  false = 누가 수정하든 바로 반영 (이력은 그대로 다 남음)  ← 현재 POC 설정
+//  true  = 현장소장 본인 외에는 "승인 대기"로 들어가고, 소장이 승인해야 반영
+//  ※ POC 끝나고 승인 절차를 살리려면 이 값만 true로 바꾸면 됩니다.
+// ══════════════════════════════════════════════════════════
+const REQUIRE_MAP_APPROVAL = false;
+
+// 변경 제안 등록 — 승인 절차가 켜져 있으면 현장소장 본인만 즉시 반영, 그 외에는 대기 상태로 저장
 async function proposeMapChange(siteId, discKey, catIdx, taskName, changeType, payload){
   if(!currentUser) return null;
   if(pendingChangeFor(siteId, discKey, catIdx, taskName)){
     showNotif('⚠ 안내','이미 검토중인 변경 제안이 있어요.');
     return null;
   }
-  const autoApprove = isManagerOfSite(siteId);
+  const autoApprove = !REQUIRE_MAP_APPROVAL || isManagerOfSite(siteId);
   const nowIso = new Date().toISOString();
   const row = {
     site_id: siteId+1, disc_key: discKey, cat_idx: catIdx, task_name: taskName,
@@ -4671,10 +4696,12 @@ function mqReqLine(req, showActions){
   if(req.change_type==='add') detail = `${req.payload?.name||''} (${fmtDMonth(req.payload?.dm)})`;
   else if(req.change_type==='edit') detail = `${req.task_name} — ${fmtDMonth(req.payload?.oldDm)} → ${fmtDMonth(req.payload?.newDm)}`;
   else detail = req.task_name;
+  // 제안자와 처리자가 같으면 승인을 거치지 않고 본인이 바로 반영한 건
+  const isDirect = req.status==='approved' && req.approved_by_id && req.proposed_by_id===req.approved_by_id;
   const statusBadge = req.status==='pending'
     ? `<span style="font-size:10px;font-weight:800;color:var(--y);background:rgba(245,158,11,.12);border-radius:5px;padding:2px 6px">검토중</span>`
     : req.status==='approved'
-      ? `<span style="font-size:10px;font-weight:800;color:var(--g);background:rgba(34,197,94,.12);border-radius:5px;padding:2px 6px">승인됨</span>`
+      ? `<span style="font-size:10px;font-weight:800;color:var(--g);background:rgba(34,197,94,.12);border-radius:5px;padding:2px 6px">${isDirect?'반영됨':'승인됨'}</span>`
       : `<span style="font-size:10px;font-weight:800;color:var(--r);background:rgba(239,68,68,.1);border-radius:5px;padding:2px 6px">반려됨</span>`;
   const actions = (showActions && req.status==='pending')
     ? `<div style="display:flex;gap:6px;margin-top:6px">
@@ -4683,7 +4710,9 @@ function mqReqLine(req, showActions){
       </div>` : '';
   const who = req.status==='pending'
     ? `제안: ${req.proposed_by||'-'}`
-    : `제안: ${req.proposed_by||'-'} · 처리: ${req.approved_by||'-'}`;
+    : isDirect
+      ? `수정: ${req.proposed_by||'-'}`
+      : `제안: ${req.proposed_by||'-'} · 처리: ${req.approved_by||'-'}`;
   return `<div style="background:var(--surf1);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;">
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
       <span style="font-size:12px;font-weight:800;color:var(--t1)">${typeLabel}</span>
@@ -4701,6 +4730,9 @@ function renderMapChangeQueue(){
   const list = document.getElementById('mq-pending-list');
   const histList = document.getElementById('mq-history-list');
   if(!list || !histList) return;
+  // 승인 절차를 꺼둔 동안에는 "대기중" 영역이 항상 비므로 제목으로 상태를 알려준다
+  const ptitle = document.getElementById('mq-pending-title');
+  if(ptitle) ptitle.textContent = REQUIRE_MAP_APPROVAL ? '🕓 승인 대기중' : '🕓 승인 대기중 (현재 승인 절차 꺼짐 — 수정하면 바로 반영)';
   const forSite = mapChangeRequests.filter(r=>r.site_id===siteId+1);
   const pending = forSite.filter(r=>r.status==='pending');
   const history = forSite.filter(r=>r.status!=='pending').slice(0,20);
@@ -4716,7 +4748,9 @@ function toggleTaskEditMode(){
   taskEditMode = !taskEditMode;
   [
     { id:'mgr-edit-toggle', onLabel:'✏️ 항목 수정 중 (끄기)', offLabel:'✏️ 항목 수정' },
-    { id:'field-edit-toggle', onLabel:'✏️ 제안 중 (끄기)', offLabel:'✏️ 항목 수정 제안' },
+    REQUIRE_MAP_APPROVAL
+      ? { id:'field-edit-toggle', onLabel:'✏️ 제안 중 (끄기)', offLabel:'✏️ 항목 수정 제안' }
+      : { id:'field-edit-toggle', onLabel:'✏️ 항목 수정 중 (끄기)', offLabel:'✏️ 항목 수정' },
   ].forEach(({id,onLabel,offLabel})=>{
     const btn = document.getElementById(id);
     if(!btn) return;
@@ -4869,7 +4903,11 @@ function openTaskModal(discKey, catIdx, taskIdx, siteId){
   document.getElementById('ti-dm-row').style.display = canEdit ? 'flex' : 'none';
   document.getElementById('ti-dm-save').style.display = canEdit ? '' : 'none';
   document.getElementById('ti-del-btn').style.display = canEdit ? '' : 'none';
-  document.getElementById('ti-edit-hint').style.display = (canEdit && !isMasterEdit) ? '' : 'none';
+  const hintEl = document.getElementById('ti-edit-hint');
+  hintEl.textContent = REQUIRE_MAP_APPROVAL
+    ? '※ 현장소장 본인이 수정하면 바로 반영되고, 그 외에는 현장소장 승인 후 반영돼요.'
+    : '※ 수정하면 바로 반영되고, 변경 이력은 「변경 이력·승인」에 모두 기록돼요.';
+  hintEl.style.display = (canEdit && !isMasterEdit) ? '' : 'none';
   document.getElementById('ov-taskinfo').classList.add('open');
 }
 
@@ -5125,6 +5163,15 @@ function getTaskStatus(taskDm, curDm){
 // 현장소장 1명이 여러 현장(예: 천안 통합현장 5·6단지)을 겸임하는 경우 선택 중인 현장 id.
 // null이면 currentUser.siteIds[0]을 기본값으로 씀.
 let mgrSiteId = null;
+// 현장 대시보드는 현장담당자에게도 열려 있다.
+// 업무 항목 수정은 공종을 아는 담당자가 해야 하므로 담당자에게도 열어두고(이력은 항상 남음),
+// 착공일·마일스톤처럼 현장 전체 일정을 흔드는 '현장 설정'만 현장소장/관리자로 제한한다.
+function applyMgrViewPermission(){
+  const canSetting = currentUser && (currentUser.role==='MANAGER' || currentUser.role==='ADMIN' || currentUser.role==='HQ');
+  const el = document.getElementById('mgr-setting-btn');
+  if(el) el.style.display = canSetting ? '' : 'none';
+}
+
 function currentMgrSiteId(){
   if(mgrSiteId!=null) return mgrSiteId;
   return currentUser?.siteIds?.[0] ?? 0;
@@ -5139,8 +5186,9 @@ function onMgrSiteChange(){
 
 function renderManager(){
   if(!currentUser) return;
-  // 현장소장(MANAGER)은 본인이 배정된 현장만, 관리자/본사는 활성 현장 전체를 골라볼 수 있음
-  const mySiteIds = currentUser.role==='MANAGER'
+  // 현장소장·현장담당자는 본인이 배정된 현장만, 관리자/본사는 활성 현장 전체를 골라볼 수 있음
+  const ownSite = currentUser.role==='MANAGER' || currentUser.role==='SITE';
+  const mySiteIds = ownSite
     ? ((currentUser.siteIds && currentUser.siteIds.length) ? currentUser.siteIds : [0])
     : activeSitesList().map(s=>s.id);
   const sel = document.getElementById('mgr-site-sel');
