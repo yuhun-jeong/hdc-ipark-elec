@@ -398,7 +398,6 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   </div>
   <div class="sp"></div>
   <button class="tbtn dng" onclick="openDelay()">⚠ 지연 현황</button>
-  <button class="tbtn" onclick="openScheduleLog()">🔄 일정변경 현황</button>
   <button class="tbtn pri" id="topbtn-addsite" onclick="openAddSite()">＋ 현장 추가</button>
   <div class="vr"></div>
   <div class="user-chip" onclick="openMyAccount()">
@@ -815,12 +814,15 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     <div class="admin-section-head">
       <div>
         <div class="admin-section-title">🗺️ 기준 프로세스맵 관리</div>
-        <div class="admin-section-sub">34개월 기준 원본 템플릿 — 업무를 클릭하면 시점(dm) 수정·삭제, 아래 양식으로 업무 추가 (5개 공종 공통, 전기 포함)</div>
+        <div class="admin-section-sub">34개월 기준 원본 템플릿 — 「항목 수정」을 켜고 업무를 끌어서 다른 달로 옮기면 시점이 바뀝니다. 업무를 클릭하면 상세 수정·삭제, 아래 양식으로 업무 추가 (5개 공종 공통, 전기 포함)</div>
       </div>
-      <span id="admin-map-count" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button id="amap-edit-toggle" onclick="toggleAdminMapEdit()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">✏️ 항목 수정</button>
+        <span id="admin-map-count" style="font-size:12px;color:var(--t3);font-family:var(--mono)"></span>
+      </div>
     </div>
     <div id="admin-map-disc-cards" style="display:flex;gap:8px;padding:0 20px 12px;flex-wrap:wrap;"></div>
-    <div style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 380px);border:1px solid var(--bd);border-radius:10px;margin-bottom:16px;">
+    <div id="admin-map-scroll" class="fat-scroll" ondragover="amAutoScroll(event)" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 380px);border:1px solid var(--bd);border-radius:10px;margin-bottom:16px;">
       <table id="admin-map-table" style="border-collapse:collapse;width:100%;"></table>
     </div>
     <div class="admin-form">
@@ -950,17 +952,6 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   </div>
 </div>
 
-<div class="overlay" id="ov-schedulelog" onclick="if(event.target===this)closeAll()">
-  <div class="popup" style="width:520px">
-    <div class="popup-head">
-      <div class="popup-ico" style="background:var(--bb)">🔄</div>
-      <div><div class="popup-title">일정변경 현황</div><div class="popup-sub">목표일 조정 이력 · 사유</div></div>
-      <button class="popup-x" onclick="closeAll()">✕</button>
-    </div>
-    <div class="popup-body" id="schedulelog-body" style="max-height:420px;overflow-y:auto"></div>
-    <div class="popup-foot"><button class="tbtn" onclick="closeAll()">닫기</button></div>
-  </div>
-</div>
 
 <div class="overlay" id="ov-addsite" onclick="if(event.target===this)closeAll()">
   <div class="popup">
@@ -1793,8 +1784,8 @@ function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 // 계획 자체가 "착공 기준 몇 개월"로 짜여 있어서, 지연·잔여도 일수 대신 개월로 보여준다.
 // 1개월 = 30일 기준 (업무 시점 dm 을 날짜로 바꿀 때 쓰는 기준과 동일).
 function fmtMonths(days){
-  const v = Math.round(Math.abs(days) / 30 * 10) / 10;
-  return (Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)) + '개월';
+  // 하루만 지나도 1개월로 센다 (0.5개월 같은 표기 없이 올림)
+  return Math.ceil(Math.abs(days) / 30) + '개월';
 }
 // 마감 대비 상태 뱃지 문구 — 지난 건 D+, 남은 건 D-
 function fmtDday(dl){
@@ -3101,34 +3092,6 @@ function openDelay(){
   document.getElementById('ov-delay').classList.add('open');
 }
 
-// 전체 현장 × 5개 공종 일정변경 이력
-function openScheduleLog(){
-  const entries=[];
-  sites.forEach(site=>{
-    getSiteSchedule(site.id).disciplines.forEach(disc=>{
-      collectDiscTasks(site, disc).forEach(it=>{
-        (it.status.scheduleLog||[]).forEach(log=>entries.push({siteId:site.id, disc, it, site:site.name, ...log}));
-      });
-    });
-  });
-  entries.sort((a,b)=>b.date.localeCompare(a.date));
-  const body=document.getElementById('schedulelog-body');
-  body.innerHTML = entries.length===0
-    ? '<div style="text-align:center;padding:24px;color:var(--t3)">아직 조정된 일정이 없습니다</div>'
-    : entries.map(e=>`<div class="delay-item" style="cursor:pointer;align-items:flex-start" onclick="closeAll();openDiscCell(${e.siteId},'${e.disc.key}',${e.it.ci},${e.it.ti})">
-        <div>
-          <div class="delay-site">${e.site} · ${e.disc.name} · ${e.it.task.name}</div>
-          <div class="delay-task">${e.from} → ${e.to}</div>
-          <div style="font-size:12px;color:var(--t2);margin-top:3px">${e.reason}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:11px;color:var(--t3);font-family:var(--mono)">${e.date}</div>
-          <div style="font-size:11px;color:var(--t3);margin-top:2px">${e.by}</div>
-        </div>
-      </div>`).join('');
-  document.getElementById('ov-schedulelog').classList.add('open');
-}
-
 function openAddSite(){document.getElementById('ov-addsite').classList.add('open');}
 function addSite(){
   const name=document.getElementById('ns-name').value.trim();
@@ -3529,6 +3492,96 @@ async function deleteTiTask(){
   showNotif(result.autoApprove?'🗑️ 삭제 완료':'📝 삭제 제안됨', result.autoApprove?`"${task.name}"이(가) 삭제됐어요.`:`"${task.name}" 삭제가 현장소장 승인 대기중이에요.`);
 }
 
+// ══════════════════════════════════════════════════════════
+//  기준 프로세스맵 — 업무를 끌어다 다른 달로 옮겨 기준 시점 변경
+//  여기는 모든 현장이 따라가는 원본 템플릿이라, 현장별 승인 절차 없이
+//  관리자가 바꾸면 바로 반영된다 (팝업에서 숫자로 고칠 때와 동일).
+//  같은 줄(같은 공종·업무구분) 안에서만 옮길 수 있다.
+// ══════════════════════════════════════════════════════════
+let adminMapEdit = false;
+let amDrag = null;
+
+function toggleAdminMapEdit(){
+  adminMapEdit = !adminMapEdit;
+  const btn = document.getElementById('amap-edit-toggle');
+  if(btn){
+    if(adminMapEdit){
+      btn.style.background='var(--r)'; btn.style.borderColor='var(--r)'; btn.style.color='#fff';
+      btn.textContent='✏️ 항목 수정 중 (끄기)';
+    } else {
+      btn.style.background='var(--surf2)'; btn.style.borderColor='var(--bd2)'; btn.style.color='var(--t2)';
+      btn.textContent='✏️ 항목 수정';
+    }
+  }
+  renderAdminMap();
+  showNotif(
+    adminMapEdit ? '✏️ 기준 프로세스맵 수정 모드' : '🔒 수정 모드 꺼짐',
+    adminMapEdit ? '업무를 끌어서 다른 달 칸에 놓으면 기준 시점이 바뀌어요. 모든 현장에 반영되니 주의해주세요.'
+                 : '업무를 클릭하면 조회만 가능합니다.'
+  );
+}
+
+function amDragStart(e, discKey, catIdx, taskIdx, dm){
+  amDrag = { discKey, catIdx, taskIdx, dm };
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed='move';
+    try { e.dataTransfer.setData('text/plain', discKey+'-'+catIdx+'-'+taskIdx); } catch(_){}
+  }
+  e.currentTarget.classList.add('fm-dragging');
+}
+
+function amDragEnd(e){
+  e.currentTarget.classList.remove('fm-dragging');
+  amDrag = null;
+  document.querySelectorAll('#admin-map-table td.fm-drop-on').forEach(td=>td.classList.remove('fm-drop-on'));
+}
+
+function amCanDrop(td){
+  if(!amDrag || !td || !td.dataset) return false;
+  if(td.dataset.disc !== amDrag.discKey) return false;
+  if(parseInt(td.dataset.cat) !== amDrag.catIdx) return false;
+  return parseInt(td.dataset.dm) !== amDrag.dm;
+}
+
+function amDragOver(e){
+  const td = e.currentTarget;
+  if(!amCanDrop(td)) return;
+  e.preventDefault();
+  if(e.dataTransfer) e.dataTransfer.dropEffect='move';
+  td.classList.add('fm-drop-on');
+}
+
+function amDragLeave(e){ e.currentTarget.classList.remove('fm-drop-on'); }
+
+function amDrop(e){
+  const td = e.currentTarget;
+  td.classList.remove('fm-drop-on');
+  if(!amCanDrop(td)) return;
+  e.preventDefault();
+  const d = amDrag;
+  amDrag = null;
+  const newDm = parseInt(td.dataset.dm);
+  const task = DISCIPLINES.find(x=>x.key===d.discKey)?.categories[d.catIdx]?.tasks[d.taskIdx];
+  if(!task || isNaN(newDm) || task.dm===newDm) return;
+  const oldDm = task.dm;
+  task.dm = newDm;
+  saveState();
+  renderAdminMap();
+  renderHQ();
+  showNotif('✅ 기준 시점 변경', `"${task.name}"  ${fmtDMonth(oldDm)} → ${fmtDMonth(newDm)}`);
+}
+
+// 표가 가로로 길어서, 끌고 가장자리에 가면 자동으로 옆으로 밀어준다
+function amAutoScroll(e){
+  if(!amDrag) return;
+  const box = document.getElementById('admin-map-scroll');
+  if(!box) return;
+  const r = box.getBoundingClientRect();
+  const EDGE = 90, SPEED = 24;
+  if(e.clientX > r.right - EDGE)     box.scrollLeft += SPEED;
+  else if(e.clientX < r.left + EDGE) box.scrollLeft -= SPEED;
+}
+
 function renderAdminMap(){
   const tbl = document.getElementById('admin-map-table');
   if(!tbl) return;
@@ -3550,6 +3603,11 @@ function renderAdminMap(){
     discSel.dataset.filled = '1';
     refreshAdminMapCatSelect();
   }
+
+  // 항목 수정 모드일 때만 끌어서 옮길 수 있게 한다
+  const amDrop = (dk,ci,dm) => adminMapEdit
+    ? ` data-disc="${dk}" data-cat="${ci}" data-dm="${dm}" ondragover="amDragOver(event)" ondragleave="amDragLeave(event)" ondrop="amDrop(event)"`
+    : '';
 
   const visibleDiscs = adminMapFilterDisc ? DISCIPLINES.filter(d=>d.key===adminMapFilterDisc) : DISCIPLINES;
   const ALL_DMS = [];
@@ -3582,13 +3640,16 @@ function renderAdminMap(){
         const borderT = isFirstCat ? '2px solid var(--bd2)' : '1px solid var(--bd)';
         const borderB = isLastCat ? '2px solid var(--bd2)' : '1px solid var(--bd)';
         if(!tasksHere.length){
-          html += `<td style="border:1px solid var(--bd);border-top:${borderT};border-bottom:${borderB};min-width:80px"></td>`;
+          html += `<td${amDrop(disc.key,ci,dm)} style="border:1px solid var(--bd);border-top:${borderT};border-bottom:${borderB};min-width:80px"></td>`;
           return;
         }
-        html += `<td style="border-top:${borderT};border-bottom:${borderB};border-left:1px solid var(--bd);border-right:1px solid var(--bd);padding:4px 3px;vertical-align:top;min-width:80px">`;
+        html += `<td${amDrop(disc.key,ci,dm)} style="border-top:${borderT};border-bottom:${borderB};border-left:1px solid var(--bd);border-right:1px solid var(--bd);padding:4px 3px;vertical-align:top;min-width:80px">`;
         tasksHere.forEach(task=>{
           const taskIdx = cat.tasks.indexOf(task);
-          html += `<div class="task-clickable" onclick="openTaskModal('${disc.key}',${ci},${taskIdx},null)" style="background:var(--surf2);border:1px solid var(--bd2);border-radius:6px;padding:4px 6px;margin-bottom:3px;cursor:pointer;">
+          const amDragAttrs = adminMapEdit
+            ? ` draggable="true" ondragstart="amDragStart(event,'${disc.key}',${ci},${taskIdx},${task.dm})" ondragend="amDragEnd(event)" title="끌어서 다른 달로 옮기면 기준 시점이 바뀝니다"`
+            : '';
+          html += `<div class="task-clickable${adminMapEdit?' fm-drag':''}"${amDragAttrs} onclick="openTaskModal('${disc.key}',${ci},${taskIdx},null)" style="background:var(--surf2);border:1px solid var(--bd2);border-radius:6px;padding:4px 6px;margin-bottom:3px;cursor:pointer;">
             <div style="font-size:11px;font-weight:700;color:var(--t1);line-height:1.4;word-break:keep-all">${task.name}</div>
           </div>`;
         });
