@@ -125,6 +125,11 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:13p
 .fat-scroll::-webkit-scrollbar-thumb{background:#9aa7bd;border-radius:9px;border:3px solid var(--surf2);min-width:60px;min-height:60px;}
 .fat-scroll::-webkit-scrollbar-thumb:hover{background:var(--acc);}
 .fat-scroll{scrollbar-width:auto;scrollbar-color:#9aa7bd var(--surf2);}
+/* 항목 수정 모드에서 업무를 끌어다 다른 달로 옮기기 */
+.fm-drag{cursor:grab;}
+.fm-drag:active{cursor:grabbing;}
+.fm-dragging{opacity:.4;}
+#field-process-table td.fm-drop-on{outline:2px dashed var(--acc);outline-offset:-3px;background:rgba(49,94,251,.14)!important;}
 table{border-collapse:collapse;width:max-content;min-width:100%;}
 /* 업무가 적은 공종(건축토목·조경 등)은 컬럼 수가 적어도 매트릭스가 강제로 화면 폭만큼 늘어나지 않고 내용 너비에 맞게만 표시 */
 #main-table,#field-table,#fd-table{min-width:0;}
@@ -608,7 +613,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
           오늘 <input type="date" id="mgr-today" style="font-size:12px;padding:5px 10px;border-radius:7px;border:1.5px solid var(--bd2);background:var(--bg);color:var(--t1);font-family:var(--mono)">
         </label>
         <div id="mgr-dmonth-badge" style="font-size:15px;font-weight:800;padding:5px 18px;border-radius:20px;background:rgba(49,94,251,.12);color:var(--acc);">D+1</div>
-        <button id="mgr-edit-toggle" onclick="toggleTaskEditMode()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">✏️ 항목 수정</button>
+        <!-- 항목 수정 버튼은 현장담당자 화면(전공종 프로세스맵)에만 둔다. 여기서는 변경 이력·승인만 한다. -->
         <button id="mgr-queue-btn" onclick="openMapQueueModal()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">📝 변경 이력·승인<span id="mgr-queue-badge" style="display:none;background:var(--r);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;"></span></button>
         <button id="mgr-setting-btn" onclick="openSiteSettingModal()" style="height:32px;padding:0 14px;border-radius:9px;font-size:12px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">⚙️ 현장·마일스톤 설정</button>
       </div>
@@ -617,8 +622,8 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     <div id="mgr-disc-cards" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;"></div>
   </div>
 
-  <!-- 서브탭 -->
-  <div style="display:flex;gap:2px;padding:8px 20px 0;background:var(--surf1);flex-shrink:0;border-bottom:1px solid var(--bd);">
+  <!-- 서브탭 (공종별 프로세스맵으로 들어왔을 때는 통째로 숨긴다 — 현장 대시보드와 중복이라) -->
+  <div id="mgr-subtabs" style="display:flex;gap:2px;padding:8px 20px 0;background:var(--surf1);flex-shrink:0;border-bottom:1px solid var(--bd);">
     <button class="subtab active" id="mgtab-summary" onclick="switchMgrTab('summary')">🏢 현장 종합</button>
     <button class="subtab"        id="mgtab-alert" onclick="switchMgrTab('alert')">⚠️ 체크포인트</button>
   </div>
@@ -779,9 +784,10 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <div id="field-mgr-site-name" style="font-size:16px;font-weight:800;color:var(--t1)">-</div>
       <div id="field-mgr-dmonth-badge" style="font-size:13px;font-weight:800;padding:4px 14px;border-radius:20px;background:rgba(49,94,251,.12);color:var(--acc);">D+1</div>
       <button id="field-edit-toggle" onclick="toggleTaskEditMode()" style="height:30px;padding:0 12px;border-radius:8px;font-size:11px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--bd2);background:var(--surf2);color:var(--t2);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;">✏️ 항목 수정 제안</button>
+      <button id="field-add-btn" onclick="openFieldAddModal()" style="display:none;height:30px;padding:0 12px;border-radius:8px;font-size:11px;font-weight:800;font-family:var(--sans);border:1.5px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer;align-items:center;gap:4px;white-space:nowrap;">＋ 업무 추가</button>
       <div id="field-disc-cards" style="display:flex;gap:8px;overflow-x:auto;flex:1;"></div>
     </div>
-    <div style="overflow-x:auto;overflow-y:auto;border:1px solid var(--bd);border-radius:10px;">
+    <div id="field-map-scroll" class="fat-scroll" ondragover="fmAutoScroll(event)" style="overflow-x:auto;overflow-y:auto;border:1px solid var(--bd);border-radius:10px;">
       <table id="field-process-table" style="border-collapse:collapse;width:100%;"></table>
     </div>
   </div>
@@ -1060,20 +1066,6 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <button class="popup-x" onclick="closeAll()">✕</button>
     </div>
     <div class="popup-body" style="overflow-y:auto;flex:1;">
-      <div class="admin-form" style="margin-bottom:14px;">
-        <div class="admin-form-title">➕ 새 업무 추가 제안</div>
-        <div class="admin-form-grid">
-          <div class="admin-form-field"><label class="admin-form-label">공종</label>
-            <select class="admin-form-select" id="mq-disc" onchange="refreshMqCatSelect()"></select>
-          </div>
-          <div class="admin-form-field"><label class="admin-form-label">카테고리</label>
-            <select class="admin-form-select" id="mq-cat"></select>
-          </div>
-          <div class="admin-form-field"><label class="admin-form-label">시점 (dm)</label><input type="number" class="admin-form-input" id="mq-dm" value="1"></div>
-          <div class="admin-form-field" style="grid-column:span 2"><label class="admin-form-label">업무명</label><input type="text" class="admin-form-input" id="mq-name" placeholder="예) 한전 인입공사 신청"></div>
-        </div>
-        <button class="tbtn pri" onclick="proposeAddFromModal()">➕ 추가 제안</button>
-      </div>
       <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:6px" id="mq-pending-title">🕓 승인 대기중</div>
       <div id="mq-pending-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
       <div style="font-size:13px;font-weight:800;color:var(--t1);margin-bottom:6px">📜 처리 이력</div>
@@ -1097,6 +1089,44 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 </div>
 
 <!-- 현장·마일스톤 설정 팝업 -->
+<!-- 업무 추가 (현장담당자 › 전공종 프로세스맵) -->
+<div class="overlay" id="ov-fieldadd" onclick="if(event.target===this)closeAll()">
+  <div class="popup" style="width:520px">
+    <div class="popup-head">
+      <div><div class="popup-title" style="font-size:16px">➕ 업무 추가</div><div class="popup-sub" id="fa-sub">-</div></div>
+      <button class="popup-x" onclick="closeAll()">✕</button>
+    </div>
+    <div class="popup-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div class="fg-row" style="margin-bottom:0">
+          <label class="fg-lbl">공종</label>
+          <select id="fa-disc" class="fg-input" onchange="refreshFaCatSelect()"></select>
+        </div>
+        <div class="fg-row" style="margin-bottom:0">
+          <label class="fg-lbl">카테고리</label>
+          <select id="fa-cat" class="fg-input"></select>
+        </div>
+      </div>
+      <div class="fg-row">
+        <label class="fg-lbl">업무명</label>
+        <input type="text" id="fa-name" class="fg-input" placeholder="예) 한전 인입공사 신청">
+      </div>
+      <div class="fg-row" style="margin-bottom:0">
+        <label class="fg-lbl">시점 (착공 기준 개월)</label>
+        <input type="number" id="fa-dm" class="fg-input" value="1">
+        <div style="font-size:11px;color:var(--t3);margin-top:5px">
+          착공 전이면 음수 (-3 = 착공 3개월 전), 착공일은 0, 준공은 34.
+          <span id="fa-dm-hint" style="font-weight:700;color:var(--acc)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="popup-foot">
+      <button class="tbtn" onclick="closeAll()">취소</button>
+      <button class="tbtn pri" onclick="submitFieldAdd()">＋ 추가</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-sitesetting" onclick="if(event.target===this)closeAll()">
   <div class="popup" style="width:640px;max-height:88vh;overflow:auto">
     <div class="popup-head">
@@ -2074,7 +2104,9 @@ let adminFieldDiscipline = '건축';
 function setAdminFieldDiscipline(name){
   adminFieldDiscipline = name;
   document.querySelectorAll('#field-disc-tabs [data-fd-disc]').forEach(b=>b.classList.toggle('active', b.dataset.fdDisc===name));
-  switchFieldTab('status');
+  // 보고 있던 하위탭(공정 현황 / 전공종 프로세스맵)을 그대로 유지한다
+  const onMap = document.getElementById('ftab-map')?.classList.contains('active');
+  switchFieldTab(onMap ? 'map' : 'status');
 }
 
 // 현재 "공정 현황" 탭에 표시해야 할 공종명 — SITE는 본인 공종 고정, 관리자/본사는 선택한 공종(공종 탭)
@@ -3119,6 +3151,8 @@ function switchView(v){
   }
   if(target==='admin')   renderAdmin();
   if(target==='manager'){
+    // 항목 수정은 현장담당자 화면에서만 한다. 그 화면에서 켜둔 수정모드를 들고 넘어오지 않도록 끈다.
+    if(taskEditMode) toggleTaskEditMode();
     renderManager();
     switchMgrTab(isProcmap ? 'map' : 'summary');
   }
@@ -4683,35 +4717,11 @@ function openMapQueueModal(){
   const site = sites[siteId];
   if(!site) return;
   document.getElementById('mq-sub').textContent = site.name;
-  const discSel = document.getElementById('mq-disc');
-  discSel.innerHTML = DISCIPLINES.map(d=>`<option value="${d.key}">${d.name}</option>`).join('');
-  refreshMqCatSelect();
   renderMapChangeQueue();
   document.getElementById('ov-mapqueue').classList.add('open');
 }
 
-function refreshMqCatSelect(){
-  const discKey = document.getElementById('mq-disc')?.value;
-  const disc = DISCIPLINES.find(d=>d.key===discKey);
-  const catSel = document.getElementById('mq-cat');
-  if(!disc || !catSel) return;
-  catSel.innerHTML = disc.categories.map((c,ci)=>`<option value="${ci}">${c.name}</option>`).join('');
-}
 
-async function proposeAddFromModal(){
-  const siteId = currentMgrSiteId();
-  const discKey = document.getElementById('mq-disc').value;
-  const catIdx = parseInt(document.getElementById('mq-cat').value);
-  const dm = parseInt(document.getElementById('mq-dm').value);
-  const name = document.getElementById('mq-name').value.trim();
-  if(!name){ showNotif('⚠ 입력 오류','업무명을 입력해주세요.'); return; }
-  if(isNaN(dm)){ showNotif('⚠ 입력 오류','시점(dm)을 입력해주세요.'); return; }
-  const result = await proposeMapChange(siteId, discKey, catIdx, name, 'add', {name, dm});
-  if(!result) return;
-  document.getElementById('mq-name').value='';
-  renderMapChangeQueue(); updateMgrQueueBadge(); renderManagerMap();
-  showNotif(result.autoApprove?'✅ 추가 완료':'📝 추가 제안됨', result.autoApprove?`"${name}"이(가) 바로 추가됐어요.`:`"${name}" 추가가 현장소장 승인 대기중이에요.`);
-}
 
 function mqReqLine(req, showActions){
   const discName = DISCIPLINES.find(d=>d.key===req.disc_key)?.name || req.disc_key;
@@ -4771,7 +4781,6 @@ let taskEditMode = false; // "항목 수정" 토글이 켜져있을 때만 업�
 function toggleTaskEditMode(){
   taskEditMode = !taskEditMode;
   [
-    { id:'mgr-edit-toggle', onLabel:'✏️ 항목 수정 중 (끄기)', offLabel:'✏️ 항목 수정' },
     REQUIRE_MAP_APPROVAL
       ? { id:'field-edit-toggle', onLabel:'✏️ 제안 중 (끄기)', offLabel:'✏️ 항목 수정 제안' }
       : { id:'field-edit-toggle', onLabel:'✏️ 항목 수정 중 (끄기)', offLabel:'✏️ 항목 수정' },
@@ -4786,10 +4795,18 @@ function toggleTaskEditMode(){
       btn.textContent = offLabel;
     }
   });
-  if(taskEditMode) showNotif('✏️ 항목 수정 모드 켜짐', '이제 프로세스맵의 업무를 클릭하면 시점 수정·삭제를 제안할 수 있습니다. 다 보시고 나면 꺼주세요.');
+  // 업무 추가도 수정 모드일 때만 (실수로 눌러 추가되는 것 방지)
+  const addBtn = document.getElementById('field-add-btn');
+  if(addBtn) addBtn.style.display = taskEditMode ? 'flex' : 'none';
+  // 드래그 가능 여부가 바뀌므로 프로세스맵을 다시 그린다
+  if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
+  if(taskEditMode) showNotif('✏️ 항목 수정 모드 켜짐', '업무를 끌어서 다른 달 칸에 놓으면 시점이 바뀌어요. 클릭하면 상세 수정·삭제, 「＋ 업무 추가」로 새 업무도 넣을 수 있어요.');
   else showNotif('🔒 항목 수정 모드 꺼짐', '업무를 클릭하면 조회만 가능합니다.');
-  // 팝업이 열려있는 상태에서 토글했을 수도 있으니 즉시 반영
-  if(tiCtx) openTaskModal(tiCtx.discKey, tiCtx.catIdx, tiCtx.taskIdx, tiCtx.siteId);
+  // 팝업이 "지금 열려 있는" 상태에서 토글했을 때만 즉시 다시 그린다.
+  // (tiCtx 만 보고 열면, 닫아둔 예전 업무 팝업이 버튼만 눌러도 되살아난다)
+  if(tiCtx && document.getElementById('ov-taskinfo')?.classList.contains('open')){
+    openTaskModal(tiCtx.discKey, tiCtx.catIdx, tiCtx.taskIdx, tiCtx.siteId);
+  }
 }
 
 // 전공종 업무 고유 키 (건축·전기·기계·건축토목·조경 공통, 배열 위치 기반 — DISCIPLINES 구조가 코드에 고정돼 있어 안정적)
@@ -5506,6 +5523,9 @@ function switchMgrTab(tab){
   // (display:''는 flex가 아니라 block으로 풀려서 카드가 세로로 넓게 쌓이는 버그가 있어 명시적으로 flex를 지정)
   const cards = document.getElementById('mgr-disc-cards');
   if(cards) cards.style.display = tab==='map' ? 'flex' : 'none';
+  // 공종별 프로세스맵으로 들어온 경우엔 현장 종합·체크포인트 탭이 필요없다 (현장 대시보드에 있음)
+  const subtabs = document.getElementById('mgr-subtabs');
+  if(subtabs) subtabs.style.display = tab==='map' ? 'none' : 'flex';
   if(tab==='summary') renderManagerSummary();
 }
 
@@ -5602,6 +5622,159 @@ function renderFieldProcessMap(){
   renderFieldMap(curDm, null);
 }
 
+// ══════════════════════════════════════════════════════════
+//  전공종 프로세스맵 — 업무를 끌어다 다른 달로 옮겨 시점 변경
+//  일일이 숫자로 입력하는 대신 칸을 옮기는 방식. 저장 경로는
+//  팝업에서 시점을 고칠 때와 완전히 같아서(proposeMapChange)
+//  이력 기록·승인 흐름도 그대로 따라간다.
+//  같은 줄(같은 공종·업무구분) 안에서만 옮길 수 있다 — 다른 줄로
+//  옮기면 업무가 속한 구분 자체가 바뀌어버리기 때문.
+// ══════════════════════════════════════════════════════════
+let fmDrag = null;
+
+function fmDragStart(e, discKey, catIdx, taskIdx, dm){
+  fmDrag = { discKey, catIdx, taskIdx, dm };
+  if(e.dataTransfer){
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', discKey+'-'+catIdx+'-'+taskIdx); } catch(_){}
+  }
+  e.currentTarget.classList.add('fm-dragging');
+}
+
+function fmDragEnd(e){
+  e.currentTarget.classList.remove('fm-dragging');
+  fmDrag = null;
+  document.querySelectorAll('#field-process-table td.fm-drop-on').forEach(td=>td.classList.remove('fm-drop-on'));
+}
+
+function fmCanDrop(td){
+  if(!fmDrag || !td || !td.dataset) return false;
+  if(td.dataset.disc !== fmDrag.discKey) return false;
+  if(parseInt(td.dataset.cat) !== fmDrag.catIdx) return false;
+  return parseInt(td.dataset.dm) !== fmDrag.dm;
+}
+
+function fmDragOver(e){
+  const td = e.currentTarget;
+  if(!fmCanDrop(td)) return;      // preventDefault를 안 하면 브라우저가 "놓을 수 없음"으로 표시
+  e.preventDefault();
+  if(e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  td.classList.add('fm-drop-on');
+}
+
+function fmDragLeave(e){ e.currentTarget.classList.remove('fm-drop-on'); }
+
+async function fmDrop(e){
+  const td = e.currentTarget;
+  td.classList.remove('fm-drop-on');
+  if(!fmCanDrop(td)) return;
+  e.preventDefault();
+  const d = fmDrag;
+  fmDrag = null;
+  await moveTaskDm(d.discKey, d.catIdx, d.taskIdx, parseInt(td.dataset.dm));
+}
+
+// 표가 가로로 길어서, 끌고 가장자리에 가면 자동으로 옆으로 밀어준다
+function fmAutoScroll(e){
+  if(!fmDrag) return;
+  const box = document.getElementById('field-map-scroll');
+  if(!box) return;
+  const r = box.getBoundingClientRect();
+  const EDGE = 90, SPEED = 24;
+  if(e.clientX > r.right - EDGE)     box.scrollLeft += SPEED;
+  else if(e.clientX < r.left + EDGE) box.scrollLeft -= SPEED;
+}
+
+// 실제 시점 변경 — 팝업에서 숫자로 고칠 때와 같은 경로를 탄다
+async function moveTaskDm(discKey, catIdx, taskIdx, newDm){
+  const siteId = currentFieldSiteId();
+  if(siteId==null || isNaN(newDm)) return;
+  const schedule = getSiteSchedule(siteId);
+  const task = schedule.disciplines.find(d=>d.key===discKey)?.categories[catIdx]?.tasks[taskIdx];
+  if(!task) return;
+  const oldDm = task.dm;
+  if(oldDm === newDm) return;
+
+  const result = await proposeMapChange(siteId, discKey, catIdx, task.name, 'edit', {oldDm, newDm});
+  if(!result) return;
+  updateMgrQueueBadge();
+  renderFieldProcessMap();
+  renderFieldDiscipline();
+  renderHQ();
+  showNotif(
+    result.autoApprove ? '✅ 시점 변경됨' : '📝 수정 제안됨',
+    result.autoApprove
+      ? `"${task.name}"  ${fmtDMonth(oldDm)} → ${fmtDMonth(newDm)}`
+      : `"${task.name}" 시점 변경이 현장소장 승인 대기중이에요.`
+  );
+}
+
+// ── 현장담당자 › 전공종 프로세스맵에서 업무 추가 ──────────────
+// 현장 대시보드의 "변경 이력·승인" 안에 있던 추가 기능을, 실제로 업무를 아는
+// 현장담당자가 쓰는 화면으로 옮겨온 것. 저장 경로(proposeMapChange)는 동일해서
+// 이력 기록·승인 흐름은 그대로 따라간다.
+function currentFieldSiteId(){
+  const v = document.getElementById('field-sel')?.value;
+  return v==='' || v==null ? null : parseInt(v);
+}
+
+function openFieldAddModal(){
+  const siteId = currentFieldSiteId();
+  const site = siteId==null ? null : sites[siteId];
+  if(!site){ showNotif('⚠ 안내','현장을 먼저 선택해주세요.'); return; }
+  document.getElementById('fa-sub').textContent = site.name;
+  const discSel = document.getElementById('fa-disc');
+  discSel.innerHTML = DISCIPLINES.map(d=>`<option value="${d.key}">${d.name}</option>`).join('');
+  // 지금 보고 있는 공종이 있으면 그걸 기본값으로
+  const cur = fieldDiscFilter || DISCIPLINES.find(d=>d.name===currentFieldDiscipline())?.key;
+  if(cur) discSel.value = cur;
+  refreshFaCatSelect();
+  document.getElementById('fa-name').value = '';
+  document.getElementById('fa-dm').value = 1;
+  updateFaDmHint();
+  document.getElementById('fa-dm').oninput = updateFaDmHint;
+  document.getElementById('ov-fieldadd').classList.add('open');
+}
+
+function refreshFaCatSelect(){
+  const disc = DISCIPLINES.find(d=>d.key===document.getElementById('fa-disc')?.value);
+  const catSel = document.getElementById('fa-cat');
+  if(!disc || !catSel) return;
+  catSel.innerHTML = disc.categories.map((c,ci)=>`<option value="${ci}">${c.name}</option>`).join('');
+}
+
+// 입력한 시점이 실제로 언제인지 바로 보여줘서 오입력을 줄인다
+function updateFaDmHint(){
+  const dm = parseInt(document.getElementById('fa-dm').value);
+  const hint = document.getElementById('fa-dm-hint');
+  if(!hint) return;
+  hint.textContent = isNaN(dm) ? '' : `→ ${fmtDMonth(dm)}`;
+}
+
+async function submitFieldAdd(){
+  const siteId = currentFieldSiteId();
+  if(siteId==null){ showNotif('⚠ 안내','현장을 먼저 선택해주세요.'); return; }
+  const discKey = document.getElementById('fa-disc').value;
+  const catIdx  = parseInt(document.getElementById('fa-cat').value);
+  const dm      = parseInt(document.getElementById('fa-dm').value);
+  const name    = document.getElementById('fa-name').value.trim();
+  if(!name){ showNotif('⚠ 입력 오류','업무명을 입력해주세요.'); return; }
+  if(isNaN(dm)){ showNotif('⚠ 입력 오류','시점을 입력해주세요.'); return; }
+
+  const result = await proposeMapChange(siteId, discKey, catIdx, name, 'add', {name, dm});
+  if(!result) return;
+  closeAll();
+  renderFieldProcessMap();
+  renderFieldDiscipline();
+  renderHQ();
+  updateMgrQueueBadge();
+  showNotif(
+    result.autoApprove ? '➕ 추가 완료' : '📝 추가 제안됨',
+    result.autoApprove ? `"${name}"이(가) ${fmtDMonth(dm)}에 추가됐어요.`
+                       : `"${name}" 추가가 현장소장 승인 대기중이에요.`
+  );
+}
+
 let fieldDiscFilter = null;
 function setFieldDiscFilter(key){
   fieldDiscFilter = (key==='null'||key===null) ? null : key;
@@ -5634,6 +5807,12 @@ function renderFieldMap(curDm, filterKey){
     if(dm<=siteDuration) return 'D+'+dm;
     return '준공+'+(dm-siteDuration);
   }
+
+  // 항목 수정 모드일 때만 끌어서 옮길 수 있게 한다
+  const editing = taskEditMode;
+  const dropAttrs = (dk,ci,dm) => editing
+    ? ` data-disc="${dk}" data-cat="${ci}" data-dm="${dm}" ondragover="fmDragOver(event)" ondragleave="fmDragLeave(event)" ondrop="fmDrop(event)"`
+    : '';
 
   let html = '<thead><tr>';
   html += `<th colspan="2" style="position:sticky;left:0;z-index:40;background:var(--surf2);
@@ -5679,12 +5858,12 @@ function renderFieldMap(curDm, filterKey){
         const cellBg=isCur?'rgba(49,94,251,.05)':isNear?'rgba(49,94,251,.02)':'transparent';
 
         if(!tasksHere.length && !pendingAddsHere.length){
-          html+=`<td style="border-top:${borderT};border-bottom:${borderB};
+          html+=`<td${dropAttrs(disc.key,ci,dm)} style="border-top:${borderT};border-bottom:${borderB};
             border-left:${borderLR};border-right:${borderLR};
             background:${cellBg};min-width:${isCur?118:88}px"></td>`;
           return;
         }
-        html+=`<td style="border-top:${borderT};border-bottom:${borderB};
+        html+=`<td${dropAttrs(disc.key,ci,dm)} style="border-top:${borderT};border-bottom:${borderB};
           border-left:${borderLR};border-right:${borderLR};
           background:${cellBg};padding:4px 3px;vertical-align:top;
           min-width:${isCur?118:88}px">`;
@@ -5704,7 +5883,10 @@ function renderFieldMap(curDm, filterKey){
           const bgSt={done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
           const pendingReq = pendingChangeFor(siteId, disc.key, ci, task.name);
           const pendingBadge = pendingReq ? '<span style="font-size:9px;font-weight:800;color:var(--y);background:rgba(245,158,11,.15);border-radius:5px;padding:1px 5px">🕓 검토중</span>' : '';
-          html+=`<div class="task-clickable" onclick="openTaskModal('${disc.key}',${ci},${taskIdx},${siteId})" style="background:${bgSt};border-radius:6px;padding:4px 6px;margin-bottom:3px;">
+          const dragAttrs = editing
+            ? ` draggable="true" ondragstart="fmDragStart(event,'${disc.key}',${ci},${taskIdx},${task.dm})" ondragend="fmDragEnd(event)" title="끌어서 다른 달로 옮기면 시점이 바뀝니다"`
+            : '';
+          html+=`<div class="task-clickable${editing?' fm-drag':''}"${dragAttrs} onclick="openTaskModal('${disc.key}',${ci},${taskIdx},${siteId})" style="background:${bgSt};border-radius:6px;padding:4px 6px;margin-bottom:3px;">
             <div style="font-size:11px;font-weight:700;color:var(--t1);line-height:1.4;word-break:keep-all">${task.name}</div>
             <div style="display:flex;gap:3px;flex-wrap:wrap">${badgeTxt}${fileHtml}${pendingBadge}</div>
           </div>`;
@@ -5724,7 +5906,10 @@ function renderFieldMap(curDm, filterKey){
   tbl.innerHTML=html;
 }
 
-function closeAll(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));}
+function closeAll(){
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));
+  tiCtx = null;   // 업무 상세 팝업을 닫았으면 추적도 끊는다
+}
 
 let notifTimer;
 function showNotif(title,txt){
