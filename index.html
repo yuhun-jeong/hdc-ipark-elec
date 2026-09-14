@@ -5637,8 +5637,11 @@ function toggleFieldStageMgr(){
 }
 
 function switchFieldTab(tab){
+  // 위쪽 "공종 보기" 줄은 공정 현황 탭에서만 쓴다.
+  // 전공종 프로세스맵 탭에는 패널 안에 자체 공종 카드가 있어서 두 줄이 겹쳐 보였다.
   const discTabs = document.getElementById('field-disc-tabs');
-  if(discTabs) discTabs.style.display = (currentUser?.role==='ADMIN' || currentUser?.role==='HQ') ? 'flex' : 'none';
+  const canPickDisc = currentUser?.role==='ADMIN' || currentUser?.role==='HQ';
+  if(discTabs) discTabs.style.display = (canPickDisc && tab==='status') ? 'flex' : 'none';
   ['status','map'].forEach(t=>{
     document.getElementById(`ftab-${t}`)?.classList.toggle('active', t===tab);
   });
