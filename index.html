@@ -1005,11 +1005,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <label class="fg-lbl">코멘트</label>
         <textarea class="fg-textarea" id="cell-memo" placeholder="완료 내용, 특이사항, 조정 사유 등 자유롭게 입력" style="height:70px"></textarea>
       </div>
-      <!-- 목표일 -->
-      <div class="fg-row">
-        <label class="fg-lbl">목표일</label>
-        <input type="date" class="fg-input" id="cell-date" style="width:180px">
-      </div>
+      <!-- 목표일은 전공종 프로세스맵의 업무 시점으로만 정해지므로 여기서는 보여주지 않는다 -->
       <!-- 결과물 업로드 -->
       <div id="cell-upload-area">
         <div class="fg-lbl" style="margin-bottom:6px">결과물 업로드</div>
@@ -1793,6 +1789,17 @@ const today = new Date(); today.setHours(0,0,0,0);
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
 function fmt(d){ return d.toISOString().split('T')[0]; }
 function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
+
+// 계획 자체가 "착공 기준 몇 개월"로 짜여 있어서, 지연·잔여도 일수 대신 개월로 보여준다.
+// 1개월 = 30일 기준 (업무 시점 dm 을 날짜로 바꿀 때 쓰는 기준과 동일).
+function fmtMonths(days){
+  const v = Math.round(Math.abs(days) / 30 * 10) / 10;
+  return (Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)) + '개월';
+}
+// 마감 대비 상태 뱃지 문구 — 지난 건 D+, 남은 건 D-
+function fmtDday(dl){
+  return dl < 0 ? 'D+' + fmtMonths(dl) : 'D-' + fmtMonths(dl);
+}
 function fmtDisp(s){ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 let sites = [
@@ -1949,7 +1956,7 @@ function renderHQDiscMatrix(discKey){
       let ddayHtml='';
       if(t.st!=='done'&&t.st!=='pending'){
         const dc=dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
-        ddayHtml=`<div class="dday ${dc}">${dl<0?`D+${Math.abs(dl)}`:`D-${dl}`}</div>`;
+        ddayHtml=`<div class="dday ${dc}">${fmtDday(dl)}</div>`;
       }
       ddayHtml+=`<div class="date-lbl">${fmtDisp(t.deadline)}</div>`;
       const fileHtml=t.file?`<span class="ftag yes">📎 제출</span>`:(t.st!=='pending'?`<span class="ftag no">미제출</span>`:'');
@@ -2076,6 +2083,14 @@ function loadState(){
     console.log('버전 변경 감지 → localStorage 초기화');
     return;
   }
+  // 예전 버전에서 목표일을 직접 고쳐 "프로세스맵을 따라가지 않음"으로 잠긴 업무들을 풀어준다.
+  // (목표일 직접 수정 기능을 없앴으므로 모든 업무가 프로세스맵 시점을 따라가야 한다)
+  if(saved.sites){
+    saved.sites.forEach(st=>{
+      if(!st || !st.taskStatus) return;
+      Object.values(st.taskStatus).forEach(t=>{ if(t && t.manualDeadline) delete t.manualDeadline; });
+    });
+  }
   // USERS는 코드 기준으로만 관리
   if(saved.sites){
     sites=saved.sites;
@@ -2168,9 +2183,9 @@ function getDiscTaskStatus(site, key, task){
     site.taskStatus[key] = { st:'pending', memo:'', file:null, fileUrl:null, deadline:discTaskDeadline(site, task), completed:null };
   }
   const t = site.taskStatus[key];
-  // 마감일을 직접 수정한 적이 없으면, 공종별 프로세스맵에서 업무 시점(dm)이 바뀔 때마다 항상 최신 시점을 따라감
-  // — 현장담당자 화면이 공종별 프로세스맵과 항상 같은 순서/시점으로 연동되도록
-  if(!t.manualDeadline) t.deadline = discTaskDeadline(site, task);
+  // 목표일은 전공종 프로세스맵의 업무 시점(dm)에서만 정해진다.
+  // 예전에 있던 "직접 수정" 예외는 없앴으므로 예외 없이 항상 시점을 따라간다.
+  t.deadline = discTaskDeadline(site, task);
   if(t.st!=='done' && dLeft(t.deadline)<0) t.st='overdue';
   return t;
 }
@@ -2213,7 +2228,7 @@ function buildDiscAccordionHtml(site, disc, items, fromPopup){
       let ddayHtml='';
       if(it.status.st!=='done' && it.status.st!=='pending'){
         const dc = dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
-        ddayHtml = `<div class="dday ${dc}" style="display:inline-block;margin-right:6px">${dl<0?`D+${Math.abs(dl)}`:`D-${dl}`}</div>`;
+        ddayHtml = `<div class="dday ${dc}" style="display:inline-block;margin-right:6px">${fmtDday(dl)}</div>`;
       }
       const fileTag = it.status.file ? `<span class="ftag yes">📎 제출</span>` : '';
       const clickJs = fromPopup ? `closeAll();openDiscCell(${site.id},'${disc.key}',${it.ci},${it.ti})` : `openDiscCell(${site.id},'${disc.key}',${it.ci},${it.ti})`;
@@ -2374,7 +2389,7 @@ function renderFieldDiscipline(){
     let ddayHtml='';
     if(t.st!=='done'&&t.st!=='pending'){
       const dc=dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
-      ddayHtml=`<div class="dday ${dc}">${dl<0?`D+${Math.abs(dl)}`:`D-${dl}`}</div>`;
+      ddayHtml=`<div class="dday ${dc}">${fmtDday(dl)}</div>`;
     }
     ddayHtml+=`<div class="date-lbl">${fmtDisp(t.deadline)}</div>`;
     const fileHtml=t.file?`<span class="ftag yes">📎 제출</span>`:(t.st!=='pending'?`<span class="ftag no">미제출</span>`:'');
@@ -2415,11 +2430,11 @@ function openDiscCell(siteId, discKey, catIdx, taskIdx){
   const site = sites[siteId];
   const key = taskKey(discKey, catIdx, taskIdx);
   const t = getDiscTaskStatus(site, key, task);
-  focusedCell = { mode:'disc', siteId, key, discKey, catIdx, taskIdx, origDeadline:t.deadline };
+  focusedCell = { mode:'disc', siteId, key, discKey, catIdx, taskIdx };
   const stLabel={done:'✓ 완료',ontrack:'● 진행중',warning:'⚠ 주의',overdue:'! 지연',pending:'— 대기'};
   document.getElementById('cell-title').textContent = task.name;
   document.getElementById('cell-sub').textContent = `${site.name} · ${disc.name}/${cat.name} · ${stLabel[t.st]||''}`;
-  document.getElementById('cell-date').value = t.deadline;
+  // 목표일은 프로세스맵 시점에서 자동 계산되므로 이 팝업에서는 다루지 않는다
   document.getElementById('cell-memo').value = t.memo||'';
   updateStatusBtns(t.st||'pending');
   document.getElementById('cell-zone').style.display='block';
@@ -2584,12 +2599,12 @@ function renderManagerSummary(){
   document.getElementById('mgr-sum-delay-list').innerHTML = delay.length ? delay.slice(0,12).map(({disc,it})=>`
     <div class="delay-item" style="cursor:pointer" onclick="${itemClickJs(disc,it)}">
       <div><div class="delay-site">${it.task.name}</div><div class="delay-task">${disc.name} · ${it.cat.name}</div></div>
-      <span class="delay-badge">D+${Math.abs(dLeft(it.status.deadline))}</span>
+      <span class="delay-badge">D+${fmtMonths(dLeft(it.status.deadline))}</span>
     </div>`).join('') : '<div style="padding:20px 0;text-align:center;color:var(--t3);font-size:12px">✅ 지연 업무가 없습니다</div>';
   document.getElementById('mgr-sum-next-list').innerHTML = next.length ? next.slice(0,12).map(({disc,it,dl})=>`
     <div class="delay-item" style="cursor:pointer" onclick="${itemClickJs(disc,it)}">
       <div><div class="delay-site">${it.task.name}</div><div class="delay-task">${disc.name} · ${it.cat.name}</div></div>
-      <span class="delay-badge" style="background:var(--ym);color:var(--y)">D-${dl}</span>
+      <span class="delay-badge" style="background:var(--ym);color:var(--y)">D-${fmtMonths(dl)}</span>
     </div>`).join('') : '<div style="padding:20px 0;text-align:center;color:var(--t3);font-size:12px">임박한 업무가 없습니다</div>';
 }
 
@@ -2770,12 +2785,12 @@ function renderHqArchLists(){
   document.getElementById('ha-delay-list').innerHTML = delay.length ? delay.slice(0,12).map(({site,disc,it})=>`
     <div class="delay-item" style="cursor:pointer" onclick="${clickJs(site,disc,it)}">
       <div><div class="delay-site">${it.task.name}</div><div class="delay-task">${site.name} · ${disc.name} · ${it.cat.name}</div></div>
-      <span class="delay-badge">D+${Math.abs(dLeft(it.status.deadline))}</span>
+      <span class="delay-badge">D+${fmtMonths(dLeft(it.status.deadline))}</span>
     </div>`).join('') : '<div style="padding:20px 0;text-align:center;color:var(--t3);font-size:12px">✅ 지연 업무가 없습니다</div>';
   document.getElementById('ha-next-list').innerHTML = next.length ? next.slice(0,12).map(({site,disc,it,dl})=>`
     <div class="delay-item" style="cursor:pointer" onclick="${clickJs(site,disc,it)}">
       <div><div class="delay-site">${it.task.name}</div><div class="delay-task">${site.name} · ${disc.name} · ${it.cat.name}</div></div>
-      <span class="delay-badge" style="background:var(--ym);color:var(--y)">D-${dl}</span>
+      <span class="delay-badge" style="background:var(--ym);color:var(--y)">D-${fmtMonths(dl)}</span>
     </div>`).join('') : '<div style="padding:20px 0;text-align:center;color:var(--t3);font-size:12px">임박한 업무가 없습니다</div>';
 }
 
@@ -2857,7 +2872,7 @@ function renderHqArchTimeline(){
           if(st!=='done' && st!=='pending'){
             const dl=dLeft(t.deadline);
             const dc=dl<0?'over':dl<=3?'urg':dl<=7?'warn':'safe';
-            ddayHtml=`<div class="dday ${dc}">${dl<0?'D+'+Math.abs(dl):'D-'+dl}</div>`;
+            ddayHtml=`<div class="dday ${dc}">${fmtDday(dl)}</div>`;
           }
           if(t.file) fileHtml='<span class="ftag yes">📎 제출</span>';
           const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
@@ -2891,11 +2906,7 @@ function filter(status){
   document.getElementById('filter-txt').textContent=lbl[status];
 }
 
-function toggleCellReason(){
-  if(!focusedCell) return;
-  const changed=document.getElementById('cell-date').value!==focusedCell.origDeadline;
-  document.getElementById('cell-reason-row').style.display=changed?'':'none';
-}
+// (목표일을 직접 고치는 기능을 없애서 "변경 사유" 입력도 필요 없어졌다)
 // ── 현장 결과물 첨부 (업무 1건에 여러 개) ──────────────────────
 // 예전에는 t.file / t.fileUrl 에 1개만 담았다. 지금은 t.files 배열이 정본이고,
 // t.file / t.fileUrl 은 "제출 여부" 뱃지를 그리는 기존 코드들이 그대로 돌도록 첫 번째 파일을 비춰둔다.
@@ -3035,20 +3046,15 @@ function updateStatusBtns(st){
   });
 }
 
+// 목표일은 프로세스맵의 업무 시점에서만 정해진다. 여기서는 상태와 코멘트만 저장한다.
 function saveDiscCellDate(){
-  const {siteId,key,origDeadline}=focusedCell;
+  const {siteId,key}=focusedCell;
   const site=sites[siteId];
   const t=site.taskStatus[key];
-  const newDate=document.getElementById('cell-date').value;
+  const newDate=t.deadline;
   const newMemo=document.getElementById('cell-memo')?.value||'';
   const newSt=cellCurrentStatus||t.st||'pending';
-  if(!newDate){ showNotif('⚠ 입력 오류','목표일을 선택해주세요.'); return; }
-  if(origDeadline && newDate !== origDeadline){
-    if(!t.scheduleLog) t.scheduleLog=[];
-    t.scheduleLog.push({ date:fmt(today), from:origDeadline, to:newDate, reason:newMemo||'사유 미입력', by:currentUser?.name||'-' });
-    t.manualDeadline = true; // 수동으로 날짜를 바꾼 업무는 공종별 프로세스맵 시점 변경에 자동으로 따라가지 않음
-  }
-  t.deadline=newDate; t.memo=newMemo; t.st=newSt;
+  t.memo=newMemo; t.st=newSt;
   if(newSt==='done' && !t.completed) t.completed=fmt(today);
   saveState();
   saveDiscStatusToSupabase(siteId, key, newSt, newMemo, resultFiles(t), newDate);
@@ -3090,7 +3096,7 @@ function openDelay(){
     ?'<div style="text-align:center;padding:24px;color:var(--g)">✅ 현재 지연 중인 업무가 없습니다</div>'
     :items.map(d=>`<div class="delay-item" style="cursor:pointer" onclick="closeAll();openDiscCell(${d.siteId},'${d.disc.key}',${d.it.ci},${d.it.ti})">
         <div><div class="delay-site">${d.site} · ${d.disc.name}</div><div class="delay-task">${d.it.task.name}</div></div>
-        <span class="delay-badge">+${d.days}일 초과</span>
+        <span class="delay-badge">${fmtMonths(d.days)} 초과</span>
       </div>`).join('');
   document.getElementById('ov-delay').classList.add('open');
 }
