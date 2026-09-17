@@ -1795,6 +1795,15 @@ function dmOfDate(startStr, date){
   const st = parseYmd(startStr), t = parseYmd(date);
   return (t.y - st.y) * 12 + (t.m - st.m) + 1;
 }
+// D개월 칸이 실제로 몇 년 몇 월인지 — 월 머리글 아래에 "26.09" 처럼 보여준다
+function ymOfDm(startStr, dm){
+  if(!startStr) return '';
+  const st = parseYmd(startStr);
+  if(isNaN(st.y)) return '';
+  const d = new Date(st.y, st.m + dm - 1, 1);   // D+1 = 착공한 달
+  return String(d.getFullYear()).slice(2) + '.' + String(d.getMonth()+1).padStart(2,'0');
+}
+
 // D개월 칸의 마지막 날 = 그 칸에 있는 업무의 마감일
 function monthEndOfDm(startStr, dm){
   const st = parseYmd(startStr);
@@ -2843,7 +2852,7 @@ function renderHqArchTimeline(){
       background:${isCur?'var(--acc)':isNear?'#eef2ff':'var(--surf2)'};
       color:${isCur?'#fff':isNear?'var(--acc)':'var(--t2)'};
       border:${isCur?'2px solid var(--acc)':'1px solid var(--bd2)'};white-space:nowrap">
-      ${dmLabel(dm)}${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
+      ${dmLabel(dm)}<br><span style="font-size:10px;font-weight:600;opacity:.7">${ymOfDm(startVal, dm)}</span>${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
     </th>`;
   });
   html += '</tr></thead><tbody>';
@@ -5442,7 +5451,7 @@ function renderMgrProcessMap(curDm){
       color:${isCur?'#fff':isNear?'var(--acc)':'var(--t2)'};
       border:${isCur?'2px solid var(--acc)':'1px solid var(--bd2)'};
       white-space:nowrap">
-      ${dmLabel(dm)}${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
+      ${dmLabel(dm)}<br><span style="font-size:10px;font-weight:600;opacity:.7">${ymOfDm(startVal, dm)}</span>${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
     </th>`;
   });
   html += '</tr></thead><tbody>';
@@ -5915,7 +5924,7 @@ function renderFieldMap(curDm, filterKey){
       background:${isCur?'var(--acc)':isNear?'#eef2ff':'var(--surf2)'};
       color:${isCur?'#fff':isNear?'var(--acc)':'var(--t2)'};
       border:${isCur?'2px solid var(--acc)':'1px solid var(--bd2)'};white-space:nowrap">
-      ${dmLabel(dm)}${isCur?'<br><span style="font-size:10px;opacity:.85">현재</span>':''}
+      ${dmLabel(dm)}<br><span style="font-size:10px;font-weight:600;opacity:.7">${ymOfDm(site.start, dm)}</span>${isCur?'<br><span style="font-size:10px;opacity:.85">현재</span>':''}
     </th>`;
   });
   html+='</tr></thead><tbody>';
