@@ -5444,6 +5444,8 @@ function renderMgrProcessMap(curDm){
   const tbl = document.getElementById('mgr-process-table');
   const siteId = currentMgrSiteId();
   const site   = sites[siteId];
+  // 월 머리글 아래 년월 — 현재 D개월(curDm)을 계산한 것과 같은 착공일(화면 상단 착공일 입력칸)을 쓴다
+  const mgrStart = document.getElementById('mgr-start')?.value || site?.start;
   syncStageOverdue(site);
   const schedule = getSiteSchedule(siteId);
 
@@ -5479,7 +5481,7 @@ function renderMgrProcessMap(curDm){
       color:${isCur?'#fff':isNear?'var(--acc)':'var(--t2)'};
       border:${isCur?'2px solid var(--acc)':'1px solid var(--bd2)'};
       white-space:nowrap">
-      ${dmLabel(dm)}<br><span style="font-size:10px;font-weight:600;opacity:.7">${ymOfDm(startVal, dm)}</span>${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
+      ${dmLabel(dm)}<br><span style="font-size:10px;font-weight:600;opacity:.7">${ymOfDm(mgrStart, dm)}</span>${isCur?'<br><span style="font-size:11px;opacity:.85">현재</span>':''}
     </th>`;
   });
   html += '</tr></thead><tbody>';
