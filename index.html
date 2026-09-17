@@ -979,7 +979,10 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <div><div class="popup-title" id="cell-title">—</div><div class="popup-sub" id="cell-sub">—</div></div>
       <button class="popup-x" onclick="closeAll()">✕</button>
     </div>
-    <div class="popup-body">
+    <div class="popup-body" id="cell-work-home">
+      <!-- 업무 처리 칸(상태·코멘트·결과물). 공정현황에서 열면 여기,
+           전공종 프로세스맵에서 열면 업무 정보 팝업 아래로 이 덩어리를 그대로 옮겨 붙인다(입력칸은 하나만 존재) -->
+      <div id="cell-work">
       <!-- 상태 변경 버튼 -->
       <div class="fg-row">
         <label class="fg-lbl">업무 상태</label>
@@ -1008,6 +1011,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         </div>
         <div id="cell-file-list" style="display:none;flex-direction:column;gap:6px;margin-top:8px;"></div>
       </div>
+      </div><!-- /cell-work -->
     </div>
     <div class="popup-foot">
       <button class="tbtn" onclick="closeAll()">닫기</button>
@@ -1018,12 +1022,12 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 
 <!-- 업무 상세정보 팝업 (전공종 프로세스맵 업무 클릭시) -->
 <div class="overlay" id="ov-taskinfo" onclick="if(event.target===this)closeAll()">
-  <div class="popup" style="width:560px">
+  <div class="popup" id="ti-popup" style="width:560px;max-height:92vh;display:flex;flex-direction:column">
     <div class="popup-head">
       <div><div class="popup-title" id="ti-title" style="font-size:18px">—</div><div class="popup-sub" id="ti-id">—</div></div>
       <button class="popup-x" onclick="closeAll()">✕</button>
     </div>
-    <div class="popup-body">
+    <div class="popup-body" style="overflow-y:auto;flex:1;min-height:0">
       <div class="task-info-grid">
         <div>수행시점</div><div id="ti-when">—</div>
         <div>공종/분류</div><div id="ti-cat">—</div>
@@ -1039,6 +1043,15 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <input type="number" id="ti-dm-input" style="width:90px;padding:7px 10px;border-radius:8px;border:1.5px solid var(--bd2);background:var(--surf2);font-family:var(--mono);font-size:12px">
         <button class="tbtn pri" id="ti-dm-save" style="display:none" onclick="saveTaskDm()">💾 저장</button>
         <button class="tbtn" id="ti-del-btn" style="display:none;color:var(--r);border-color:rgba(239,68,68,.35)" onclick="deleteTiTask()">🗑️ 이 업무 삭제</button>
+      </div>
+      <!-- 전공종 프로세스맵에서 열었을 때만: 공정현황의 업무 처리 칸을 여기 붙여 바로 처리 -->
+      <div id="ti-work-wrap" style="display:none;margin-top:18px;padding-top:16px;border-top:2px solid var(--bd)">
+        <div style="font-size:14px;font-weight:800;color:var(--t1);margin-bottom:12px">📋 업무 처리 <span id="ti-work-st" style="font-size:12px;font-weight:700;color:var(--t3);margin-left:6px"></span></div>
+        <div id="ti-work-slot"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+          <button class="tbtn" onclick="closeAll()">닫기</button>
+          <button class="tbtn pri" onclick="saveCellDate()">💾 업무 처리 저장</button>
+        </div>
       </div>
       <div id="ti-edit-hint" style="display:none;margin-top:8px;font-size:11px;color:var(--t3)">※ 현장소장 본인이 수정하면 바로 반영되고, 그 외에는 현장소장 승인 후 반영돼요.</div>
     </div>
@@ -2444,13 +2457,15 @@ function renderFieldDiscipline(){
 }
 
 // 공종 업무 셀 클릭 → 기존 ov-cell 팝업 재사용 (STAGES와 별개 경로: focusedCell.mode='disc')
-function openDiscCell(siteId, discKey, catIdx, taskIdx){
+// 업무 처리 칸(상태·코멘트·결과물)에 이 업무의 현재 값을 채운다. 팝업은 열지 않는다.
+function fillCellWork(siteId, discKey, catIdx, taskIdx){
   const schedule = getSiteSchedule(siteId);
   const disc = schedule.disciplines.find(d=>d.key===discKey);
-  if(!disc) return;
+  if(!disc) return null;
   const cat = disc.categories[catIdx];
-  const task = cat.tasks[taskIdx];
+  const task = cat && cat.tasks[taskIdx];
   const site = sites[siteId];
+  if(!task || !site) return null;
   const key = taskKey(discKey, catIdx, taskIdx);
   const t = getDiscTaskStatus(site, key, task);
   focusedCell = { mode:'disc', siteId, key, discKey, catIdx, taskIdx };
@@ -2462,6 +2477,19 @@ function openDiscCell(siteId, discKey, catIdx, taskIdx){
   updateStatusBtns(t.st||'pending');
   document.getElementById('cell-zone').style.display='block';
   renderCellFiles();
+  return { site, disc, cat, task, t, label: stLabel[t.st]||'' };
+}
+
+// 업무 처리 칸을 공정현황 팝업(false) 또는 업무 정보 팝업 아래(true)로 옮긴다
+function placeCellWork(inTaskInfo){
+  const work = document.getElementById('cell-work');
+  const target = document.getElementById(inTaskInfo ? 'ti-work-slot' : 'cell-work-home');
+  if(work && target && work.parentNode !== target) target.appendChild(work);
+}
+
+function openDiscCell(siteId, discKey, catIdx, taskIdx){
+  if(!fillCellWork(siteId, discKey, catIdx, taskIdx)) return;
+  placeCellWork(false);
   document.getElementById('ov-cell').classList.add('open');
 }
 
@@ -3004,6 +3032,7 @@ async function handleDiscCellFile(input){
   saveState();
   saveDiscStatusToSupabase(siteId, key, t.st, t.memo||'', resultFiles(t), t.deadline);
   updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ();
+  if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
   if(ok && !fail)      showNotif('📎 업로드 완료',`${document.getElementById('cell-title').textContent} 결과물 ${ok}개가 등록됐어요.`);
   else if(ok && fail)  showNotif('📎 일부 완료',`${ok}개 등록, ${fail}개는 파일명만 등록됐어요.`);
   else                 showNotif('📎 로컬 등록',`파일명만 등록됐어요. 저장 버튼을 눌러주세요.`);
@@ -3033,6 +3062,7 @@ async function removeDiscCellFile(idx){
   saveState();
   saveDiscStatusToSupabase(siteId, key, t.st, t.memo||'', resultFiles(t), t.deadline);
   updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ();
+  if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
   showNotif('🗑️ 파일 삭제', list.length ? `"${cur.name}" 을(를) 지웠어요. (남은 첨부 ${list.length}개)` : '결과물 파일이 삭제됐어요.');
 }
 
@@ -3082,6 +3112,7 @@ function saveDiscCellDate(){
   saveState();
   saveDiscStatusToSupabase(siteId, key, newSt, newMemo, resultFiles(t), newDate);
   updateSiteStatus(siteId); renderFieldDiscipline(); renderHQ(); closeAll();
+  if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
   showNotif('💾 저장 완료','공정 상태가 업데이트됐어요.');
 }
 
@@ -5076,6 +5107,25 @@ function openTaskModal(discKey, catIdx, taskIdx, siteId){
     ? '※ 현장소장 본인이 수정하면 바로 반영되고, 그 외에는 현장소장 승인 후 반영돼요.'
     : '※ 수정하면 바로 반영되고, 변경 이력은 「변경 이력·승인」에 모두 기록돼요.';
   hintEl.style.display = (canEdit && !isMasterEdit) ? '' : 'none';
+
+  // 현장담당자 › 전공종 프로세스맵에서 연 경우: 공정현황의 업무 처리 칸을 아래에 붙여 바로 처리하게 한다
+  const workWrap = document.getElementById('ti-work-wrap');
+  const fromFieldMap = siteId!=null && document.getElementById('view-field')?.classList.contains('active');
+  const tiOpen = document.getElementById('ov-taskinfo').classList.contains('open');
+  if(fromFieldMap){
+    // 같은 업무 팝업을 다시 그리는 경우(수정모드 토글·첨부 후)엔 입력 중인 코멘트/상태를 지우지 않는다
+    const sameTask = tiOpen && focusedCell && focusedCell.siteId===siteId && focusedCell.key===key;
+    const info = sameTask ? null : fillCellWork(siteId, discKey, catIdx, taskIdx);
+    if(sameTask) renderCellFiles();
+    placeCellWork(true);
+    if(info) document.getElementById('ti-work-st').textContent = '현재 ' + info.label;
+    workWrap.style.display = '';
+    document.getElementById('ti-popup').style.width = '680px';
+  } else {
+    workWrap.style.display = 'none';
+    placeCellWork(false);
+    document.getElementById('ti-popup').style.width = '560px';
+  }
   document.getElementById('ov-taskinfo').classList.add('open');
 }
 
