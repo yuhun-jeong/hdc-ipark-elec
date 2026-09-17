@@ -3329,6 +3329,8 @@ async function saveUserEdit(i){
   const u=USERS[i];
   const edits=pendingUserEdits[i];
   if(!edits) return;
+  // 수정을 시작한 뒤 "현장설정"으로 배속현장을 바꿨을 수 있으므로 항상 지금 값을 쓴다
+  edits.siteIds = (u.siteIds||[]).slice();
   
   try {
     await sb.update('users', `?id=eq.${u.id}`, {
@@ -3337,7 +3339,7 @@ async function saveUserEdit(i){
       name: edits.name,
       role: edits.role,
       discipline: edits.discipline||'',
-      site_ids: edits.siteIds||u.siteIds||[],
+      site_ids: edits.siteIds,
       active: u.active
     });
     // 로컬 반영
@@ -3367,14 +3369,40 @@ function openUserSites(i){
     : `<span style="color:var(--t3);font-size:12px">등록된 현장이 없습니다.</span>`;
   document.getElementById('ov-usersites').classList.add('open');
 }
-function saveUserSites(){
+// 배속 현장 저장 — 예전엔 화면 메모리(USERS)만 바꾸고 DB에는 안 써서,
+// 로그인할 때 DB 값을 읽으면 "배속된 현장이 없습니다" 가 떴다. 이제 users.site_ids 까지 저장한다.
+async function saveUserSites(){
   if(editingUserIdx===null) return;
-  const u=USERS[editingUserIdx];
-  u.siteIds=[...document.querySelectorAll('.usersites-chk:checked')].map(el=>parseInt(el.value));
+  const i = editingUserIdx;
+  const u = USERS[i];
+  const before = (u.siteIds||[]).slice();
+  const siteIds = [...document.querySelectorAll('.usersites-chk:checked')].map(el=>parseInt(el.value));
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${encodeURIComponent(u.id)}`, {
+      method: 'PATCH',
+      headers: sb.headers,
+      body: JSON.stringify({ site_ids: siteIds })
+    });
+    if(!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text()));
+    const rows = await res.json();
+    if(!Array.isArray(rows) || !rows.length) throw new Error('해당 아이디의 계정을 DB에서 찾지 못했습니다');
+  } catch(e){
+    console.log('배속 현장 저장 오류:', e);
+    u.siteIds = before;
+    showNotif('⚠ 저장 실패', `${u.name}의 배속 현장을 저장하지 못했어요. 다시 시도해주세요.`);
+    return;
+  }
+  u.siteIds = siteIds;
+  // 이름·비밀번호 등을 수정 중이던 계정이면, 대기 중인 수정본에도 새 배속현장을 반영해 옛 값으로 덮어쓰지 않게 한다
+  if(pendingUserEdits[i]) pendingUserEdits[i].siteIds = siteIds.slice();
+  // 관리자가 자기 계정을 바꾼 경우 지금 화면에도 바로 반영
+  if(currentUser && currentUser.id===u.id){ currentUser.siteIds = siteIds.slice(); refreshFieldSel(null); }
   editingUserIdx=null;
   renderAdminUser();
   closeAll();
-  showNotif('✏️ 배속 현장 수정',`${u.name}의 배속 현장이 업데이트됐어요.`);
+  showNotif('✏️ 배속 현장 저장', siteIds.length
+    ? `${u.name}의 배속 현장이 저장됐어요. (해당 사용자는 다시 로그인하면 반영돼요)`
+    : `${u.name}의 배속 현장이 모두 해제됐어요.`);
 }
 
 function adminAddSite(){
