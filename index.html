@@ -1778,6 +1778,29 @@ const STAGE_DMONTH = [
 
 const today = new Date(); today.setHours(0,0,0,0);
 function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+
+// ── D개월(업무 시점) ↔ 날짜 ─────────────────────────────────
+// 공정표(엑셀) 월 열과 똑같이 "착공한 달 = D+1, 다음 달 = D+2 …" 로 센다.
+//   예) 2026-04-15 착공 → 2026년 4월 = D+1, 2029년 1월 = D+34
+// 예전엔 착공일부터 30일씩 끊어 세서 매달 초 1~2주가 전달로 표시됐고(전체 기간의 21%),
+// 업무 마감일도 칸보다 최대 2주 늦게 잡혔다.
+// 날짜 문자열은 연·월·일을 직접 읽는다 — Date/toISOString 을 거치면 한국시간에서 하루가 밀린다.
+function parseYmd(v){
+  if(v instanceof Date) return { y:v.getFullYear(), m:v.getMonth(), d:v.getDate() };
+  const [y, m, d] = String(v).slice(0,10).split('-').map(Number);
+  return { y, m:m-1, d };
+}
+// 날짜가 몇 번째 D개월 칸인지
+function dmOfDate(startStr, date){
+  const st = parseYmd(startStr), t = parseYmd(date);
+  return (t.y - st.y) * 12 + (t.m - st.m) + 1;
+}
+// D개월 칸의 마지막 날 = 그 칸에 있는 업무의 마감일
+function monthEndOfDm(startStr, dm){
+  const st = parseYmd(startStr);
+  const last = new Date(st.y, st.m + dm, 0);   // (착공월+dm)월의 0일 = D+dm 달의 말일
+  return last.getFullYear() + '-' + String(last.getMonth()+1).padStart(2,'0') + '-' + String(last.getDate()).padStart(2,'0');
+}
 function fmt(d){ return d.toISOString().split('T')[0]; }
 function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 
@@ -1794,9 +1817,9 @@ function fmtDday(dl){
 function fmtDisp(s){ const d=new Date(s); return `${d.getMonth()+1}/${d.getDate()}`; }
 
 let sites = [
-  // 준공예정일(end)은 착공일 + 공기(duration, 개월) 기준
-  { id:0, name:'천안아이파크 5단지', mgr:'서원익', start:'2026-04-15', end:'2029-02-15', status:'green', duration:34, basement:2, floors:35, taskStatus:{} },
-  { id:1, name:'천안아이파크 6단지', mgr:'서원익', start:'2026-04-15', end:'2029-02-15', status:'red',   duration:34, basement:3, floors:42, taskStatus:{} },
+  // 5·6단지 공사기간 2026-04-15 ~ 2029-01-14 (공정표 월 열 기준 2026년 4월 D+1 ~ 2029년 1월 D+34 → duration 34)
+  { id:0, name:'천안아이파크 5단지', mgr:'서원익', start:'2026-04-15', end:'2029-01-14', status:'green', duration:34, basement:2, floors:35, taskStatus:{} },
+  { id:1, name:'천안아이파크 6단지', mgr:'서원익', start:'2026-04-15', end:'2029-01-14', status:'red',   duration:34, basement:3, floors:42, taskStatus:{} },
   { id:2, name:'천안아이파크 3단지', mgr:'이상훈', start:'2026-10-01', status:'green', duration:28, basement:1, floors:25, taskStatus:{}, active:false },
   { id:3, name:'천안아이파크 4단지', mgr:'이상훈', start:'2026-10-01', status:'yellow', duration:40, basement:2, floors:48, taskStatus:{}, active:false },
 ];
@@ -2163,7 +2186,7 @@ function renderField(){
 
 // 계획 dm(착공 대비 개월수) → 목표일 (STAGES의 mon*30 계산과 동일한 방식)
 function discTaskDeadline(site, task){
-  return fmt(addDays(new Date(site.start), task.dm*30));
+  return monthEndOfDm(site.start, task.dm);
 }
 
 // 사이트별 업무 실제 진행상태 조회(없으면 기본값 생성)
@@ -2799,7 +2822,7 @@ function renderHqArchTimeline(){
   if(!visibleDiscs.length){ tbl.innerHTML='<tr><td style="padding:20px;text-align:center;color:var(--t3)">데이터가 없습니다.</td></tr>'; return; }
 
   const startVal = site.start;
-  const curDm = Math.max(-6, Math.min(37, Math.floor((today - new Date(startVal))/(1000*60*60*24*30)) + 1));
+  const curDm = Math.max(-6, Math.min(37, dmOfDate(startVal, today)));
   document.getElementById('ha-timeline-dmonth').textContent = fmtDMonth(curDm);
 
   const siteDuration = schedule.duration || MASTER_DURATION;
@@ -5256,9 +5279,7 @@ function ssApply(){
 }
 
 function calcDMonth(startStr, todayStr){
-  const s=new Date(startStr), t=new Date(todayStr);
-  const diff=Math.floor((t-s)/(1000*60*60*24*30));
-  return Math.max(1,Math.min(34,diff+1));
+  return Math.max(1, Math.min(34, dmOfDate(startStr, todayStr)));
 }
 
 function getTaskStatus(taskDm, curDm){
@@ -5343,7 +5364,7 @@ function renderManagerMap(){
   const startVal = document.getElementById('mgr-start').value;
   const todayVal = document.getElementById('mgr-today').value;
   const sDate = new Date(startVal), tDate = new Date(todayVal);
-  const curDm = Math.max(-6, Math.min(37, Math.floor((tDate - sDate)/(1000*60*60*24*30)) + 1));
+  const curDm = Math.max(-6, Math.min(37, dmOfDate(startVal, todayVal)));
   document.getElementById('mgr-dmonth-badge').textContent = fmtDMonth(curDm);
 
   // ── 공종 카드 (전체 + 각 공종)
@@ -5663,7 +5684,7 @@ function renderFieldProcessMap(){
   const startVal = site.start;
   const todayVal = fmt(today);
   const sDate = new Date(startVal), tDate = new Date(todayVal);
-  const curDm = Math.max(-6, Math.min(37, Math.floor((tDate - sDate)/(1000*60*60*24*30)) + 1));
+  const curDm = Math.max(-6, Math.min(37, dmOfDate(startVal, today)));   // fmt(today)는 UTC라 하루 전날이 돼서 today 를 직접 쓴다
   document.getElementById('field-mgr-dmonth-badge').textContent = fmtDMonth(curDm);
 
   // 공종 카드
@@ -5852,8 +5873,7 @@ function setFieldDiscFilter(key){
   const site = sites[siteId];
   if(!site) return;
   const startVal = site.start;
-  const sDate = new Date(startVal), tDate = new Date(fmt(today));
-  const curDm = Math.max(-6, Math.min(37, Math.floor((tDate - sDate)/(1000*60*60*24*30)) + 1));
+  const curDm = Math.max(-6, Math.min(37, dmOfDate(startVal, today)));
   renderFieldMap(curDm, fieldDiscFilter);
 }
 
