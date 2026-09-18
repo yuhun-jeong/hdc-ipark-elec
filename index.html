@@ -442,7 +442,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <div class="kpi-row">
     <div class="kpi"><div class="kpi-ico" style="background:rgba(49,94,251,.1)">🏢</div><div><div class="kpi-num" id="ha-kpi-sites">-</div><div class="kpi-lbl">관리 현장</div></div></div>
     <div class="kpi-vr"></div>
-    <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">🟢</div><div><div class="kpi-num" style="color:var(--g)" id="ha-kpi-normal">-</div><div class="kpi-lbl">정상</div></div></div>
+    <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">✅</div><div><div class="kpi-num" style="color:var(--g)" id="ha-kpi-normal">-</div><div class="kpi-lbl">완료</div></div></div>
     <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">⏰</div><div><div class="kpi-num" style="color:var(--y)" id="ha-kpi-imminent">-</div><div class="kpi-lbl">임박 업무</div></div></div>
     <div class="kpi"><div class="kpi-ico" style="background:var(--rm)">🔴</div><div><div class="kpi-num" style="color:var(--r)" id="ha-kpi-overdue">-</div><div class="kpi-lbl">지연</div></div></div>
   </div>
@@ -682,9 +682,14 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
 <div class="page" style="padding-top:0;overflow:hidden;display:flex;flex-direction:column;">
 
   <!-- 현장 담당자 서브탭 -->
-  <div style="display:flex;gap:4px;background:var(--surf2);border-radius:0;padding:8px 20px 0;flex-shrink:0;border-bottom:1px solid var(--bd);">
+  <div style="display:flex;gap:4px;align-items:flex-end;background:var(--surf2);border-radius:0;padding:8px 20px 0;flex-shrink:0;border-bottom:1px solid var(--bd);">
     <button class="subtab active" id="ftab-status" onclick="switchFieldTab('status')">📋 공정 현황</button>
     <button class="subtab" id="ftab-map" onclick="switchFieldTab('map')">🗺️ 전공종 프로세스맵</button>
+    <!-- 현장 선택칸 — 두 탭(공정 현황·전공종 프로세스맵)이 함께 쓴다 -->
+    <div class="field-site-sel" style="margin-left:auto;flex-direction:row;align-items:center;gap:8px;padding-bottom:8px">
+      <label style="margin:0">담당 현장</label>
+      <select class="site-sel" id="fd-field-sel" onchange="onFdSiteSelChange()"></select>
+    </div>
   </div>
 
   <!-- 관리자 전용: 공종 선택 카드 (각 공종 현장담당자 화면을 모두 열람, 공종별 프로세스맵의 공종카드와 동일한 톤) -->
@@ -746,10 +751,6 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
   <div id="fpanel-status-disc" style="display:none;flex:1;flex-direction:column;min-height:0;padding:16px 0 0;">
     <div class="field-header" style="margin-bottom:14px;flex-shrink:0;margin:0 20px 14px;">
       <div class="fd-disc-badge" id="fd-disc-badge"><span class="fd-disc-dot"></span>—</div>
-      <div class="field-site-sel">
-        <label>담당 현장</label>
-        <select class="site-sel" id="fd-field-sel" onchange="onFdSiteSelChange()"></select>
-      </div>
       <div class="field-stats">
         <div class="fstat"><div class="fstat-num" id="fd-total">—</div><div class="fstat-lbl">전체 업무</div></div>
         <div class="fstat"><div class="fstat-num" style="color:var(--g)" id="fd-done">—</div><div class="fstat-lbl">완료</div></div>
@@ -1968,12 +1969,15 @@ function renderHQDiscMatrix(discKey){
     return;
   }
 
-  // 현장별 실제 항목을 taskKey 기준으로 한 번씩만 계산해서 tbody/foot에서 재사용
+  // 현장마다 업무를 추가·삭제하면 순번이 밀려서, 순번(taskKey)으로 맞추면
+  // 칸 제목과 다른 업무의 상태가 들어갔다. 그래서 "업무구분 순번 + 업무명"으로 맞춘다.
+  const matchKey = it => it.ci + '|' + it.task.name;
+  // 현장별 실제 항목을 업무명 기준으로 한 번씩만 계산해서 tbody/foot에서 재사용
   const perSite = activeSites.map(site=>{
     const schedule = getSiteSchedule(site.id);
     const siteDisc = schedule.disciplines.find(d=>d.key===discKey);
     const byKey = {};
-    if(siteDisc) collectDiscTasks(site, siteDisc).forEach(it=>{ byKey[it.key]=it; });
+    if(siteDisc) collectDiscTasks(site, siteDisc).forEach(it=>{ byKey[matchKey(it)]=it; });
     return {site, byKey};
   });
 
@@ -2010,7 +2014,7 @@ function renderHQDiscMatrix(discKey){
           <div class="site-meta">${site.mgr} · 착공 ${site.start}</div>
         </div></div></td>`;
     items.forEach(refIt=>{
-      const it = byKey[refIt.key];
+      const it = byKey[matchKey(refIt)];
       if(!it){
         html+=`<td class="td-st pending"><div class="cell"><span class="badge pending" style="font-size:9px">—</span></div></td>`;
         return;
@@ -2040,7 +2044,7 @@ function renderHQDiscMatrix(discKey){
 
   let footHtml='<td class="td-fix-foot">단계별 완료</td>';
   items.forEach(refIt=>{
-    const cnt = perSite.filter(({byKey})=>byKey[refIt.key]?.status.st==='done').length;
+    const cnt = perSite.filter(({byKey})=>byKey[matchKey(refIt)]?.status.st==='done').length;
     const full = cnt===activeSites.length && activeSites.length>0;
     footHtml+=`<td><span style="color:${full?'var(--g)':'var(--t3)'}">${cnt}/${activeSites.length}</span></td>`;
   });
@@ -2227,8 +2231,11 @@ function refreshFieldSel(forceSiteId){
 }
 
 function onFdSiteSelChange(){
+  // 프로세스맵은 예전부터 숨은 field-sel 을 읽으므로 값을 같이 맞춰준다
   document.getElementById('field-sel').value = document.getElementById('fd-field-sel').value;
-  renderFieldDiscipline();
+  // 보고 있는 탭만 다시 그린다 (전공종 프로세스맵에서 현장을 바꿔도 공정 현황으로 튀지 않게)
+  if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
+  else renderFieldDiscipline();
 }
 
 // 구 전기 STAGES 전용 매트릭스 — 이제 전기도 다른 4개 공종과 같은 renderFieldDiscipline()을 그대로 씀
@@ -2793,25 +2800,21 @@ function renderHqArch(){
 }
 
 function renderHqArchKpi(){
-  // 정상 = 지연 없는 현장, 임박 업무 = 이번 달 마감인 업무 건수
-  let normalSites=0, overdueSites=0, imminentTasks=0;
+  // 완료·임박·지연 모두 업무 건수로 센다 (현장 대시보드와 단위 통일)
+  let doneTasks=0, overdueTasks=0, imminentTasks=0;
   const list = activeSitesList();
   const discNames = hqOverviewDiscNames();
   list.forEach(site=>{
-    let sTotal=0, sOverdue=0;
     discNames.forEach(discName=>{
       const sum = computeDiscSummary(site,discName);
       if(!sum) return;
-      sTotal += sum.total; sOverdue += sum.overdue; imminentTasks += sum.imminent;
+      doneTasks += sum.done; overdueTasks += sum.overdue; imminentTasks += sum.imminent;
     });
-    if(sTotal===0) return;
-    if(sOverdue>0) overdueSites++;
-    else normalSites++;
   });
   document.getElementById('ha-kpi-sites').textContent = list.length;
-  document.getElementById('ha-kpi-normal').textContent = normalSites;
+  document.getElementById('ha-kpi-normal').textContent = doneTasks;
   document.getElementById('ha-kpi-imminent').textContent = imminentTasks;
-  document.getElementById('ha-kpi-overdue').textContent = overdueSites;
+  document.getElementById('ha-kpi-overdue').textContent = overdueTasks;
 }
 
 function renderHqArchTable(){
