@@ -177,6 +177,7 @@ tbody tr:hover .td-fix{background:var(--surf2);}
 .badge.done   {background:var(--gm);color:var(--g);}
 .badge.ontrack{background:var(--bm);color:var(--b);}
 .badge.warning{background:var(--ym);color:var(--y);}
+.badge.imminent{background:var(--ym);color:var(--y);}
 .badge.overdue{background:var(--rm);color:var(--r);}
 .badge.pending{color:var(--t3);font-weight:600;}
 .badge.sample {background:rgba(99,102,241,.1);color:#6366f1;border:1px dashed rgba(99,102,241,.3);font-size:10px;}
@@ -442,11 +443,8 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     <div class="kpi"><div class="kpi-ico" style="background:rgba(49,94,251,.1)">🏢</div><div><div class="kpi-num" id="ha-kpi-sites">-</div><div class="kpi-lbl">관리 현장</div></div></div>
     <div class="kpi-vr"></div>
     <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">🟢</div><div><div class="kpi-num" style="color:var(--g)" id="ha-kpi-normal">-</div><div class="kpi-lbl">정상</div></div></div>
-    <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">🟡</div><div><div class="kpi-num" style="color:var(--y)" id="ha-kpi-warning">-</div><div class="kpi-lbl">주의</div></div></div>
+    <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">⏰</div><div><div class="kpi-num" style="color:var(--y)" id="ha-kpi-imminent">-</div><div class="kpi-lbl">임박 업무</div></div></div>
     <div class="kpi"><div class="kpi-ico" style="background:var(--rm)">🔴</div><div><div class="kpi-num" style="color:var(--r)" id="ha-kpi-overdue">-</div><div class="kpi-lbl">지연</div></div></div>
-    <div class="kpi-vr"></div>
-    <div class="kpi"><div class="kpi-ico" style="background:rgba(245,158,11,.1)">📋</div><div><div class="kpi-num" style="color:var(--y)" id="ha-kpi-week">-</div><div class="kpi-lbl">이번주 마감</div></div></div>
-    <div class="kpi"><div class="kpi-ico" style="background:rgba(239,68,68,.08)">📁</div><div><div class="kpi-num" style="color:var(--r)" id="ha-kpi-nofile">-</div><div class="kpi-lbl">미제출</div></div></div>
   </div>
 
   <div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;margin-bottom:14px">
@@ -504,7 +502,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
     </div>
     <div class="kpi fy" id="kpi-yellow" onclick="filter('yellow')">
       <div class="kpi-ico" style="background:var(--ym)">🟡</div>
-      <div><div class="kpi-num" style="color:var(--y)" id="cnt-yellow">1</div><div class="kpi-lbl">주의</div></div>
+      <div><div class="kpi-num" style="color:var(--y)" id="cnt-yellow">1</div><div class="kpi-lbl">임박</div></div>
     </div>
     <div class="kpi fr" id="kpi-red" onclick="filter('red')">
       <div class="kpi-ico" style="background:var(--rm)">🔴</div>
@@ -528,7 +526,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <div class="legend">
         <div class="leg"><div class="leg-dot" style="background:var(--gm);border:1.5px solid var(--g)"></div>완료</div>
         <div class="leg"><div class="leg-dot" style="background:var(--bm);border:1.5px solid var(--b)"></div>진행중</div>
-        <div class="leg"><div class="leg-dot" style="background:var(--ym);border:1.5px solid var(--y)"></div>주의</div>
+        <div class="leg"><div class="leg-dot" style="background:var(--ym);border:1.5px solid var(--y)"></div>임박</div>
         <div class="leg"><div class="leg-dot" style="background:var(--rm);border:1.5px solid var(--r)"></div>지연</div>
         <div class="leg"><div class="leg-dot" style="background:rgba(99,102,241,.15);border:1.5px dashed #818cf8"></div>샘플</div>
       </div>
@@ -636,7 +634,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <div class="kpi"><div class="kpi-ico" style="background:rgba(49,94,251,.1)">📋</div><div><div class="kpi-num" id="mgr-sum-total">-</div><div class="kpi-lbl">전체 업무</div></div></div>
         <div class="kpi-vr"></div>
         <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">🟢</div><div><div class="kpi-num" style="color:var(--g)" id="mgr-sum-normal">-</div><div class="kpi-lbl">정상 공종</div></div></div>
-        <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">🟡</div><div><div class="kpi-num" style="color:var(--y)" id="mgr-sum-warning">-</div><div class="kpi-lbl">주의 공종</div></div></div>
+        <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">⏰</div><div><div class="kpi-num" style="color:var(--y)" id="mgr-sum-warning">-</div><div class="kpi-lbl">임박 공종</div></div></div>
         <div class="kpi"><div class="kpi-ico" style="background:var(--rm)">🔴</div><div><div class="kpi-num" style="color:var(--r)" id="mgr-sum-overdue">-</div><div class="kpi-lbl">지연 공종</div></div></div>
         <div class="kpi-vr"></div>
         <div class="kpi"><div class="kpi-ico" style="background:rgba(245,158,11,.1)">📅</div><div><div class="kpi-num" style="color:var(--y)" id="mgr-sum-week">-</div><div class="kpi-lbl">이번주 마감</div></div></div>
@@ -758,7 +756,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <div class="field-stats">
         <div class="fstat"><div class="fstat-num" id="fd-total">—</div><div class="fstat-lbl">전체 업무</div></div>
         <div class="fstat"><div class="fstat-num" style="color:var(--g)" id="fd-done">—</div><div class="fstat-lbl">완료</div></div>
-        <div class="fstat"><div class="fstat-num" style="color:var(--r)" id="fd-urgent">—</div><div class="fstat-lbl">긴급/지연</div></div>
+        <div class="fstat"><div class="fstat-num" style="color:var(--r)" id="fd-urgent">—</div><div class="fstat-lbl">임박/지연</div></div>
       </div>
       <div style="flex:1"></div>
       <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
@@ -993,7 +991,6 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
           <button id="st-btn-ontrack"  onclick="setCellStatus('ontrack')"  class="tbtn" style="font-size:11px;padding:5px 10px">● 진행중</button>
           <button id="st-btn-done"     onclick="setCellStatus('done')"     class="tbtn" style="font-size:11px;padding:5px 10px">✓ 완료</button>
           <button id="st-btn-overdue"  onclick="setCellStatus('overdue')"  class="tbtn" style="font-size:11px;padding:5px 10px">! 지연</button>
-          <button id="st-btn-warning"  onclick="setCellStatus('warning')"  class="tbtn" style="font-size:11px;padding:5px 10px">⚠ 주의</button>
         </div>
       </div>
       <!-- 코멘트 -->
@@ -1831,6 +1828,43 @@ function dLeft(s){ return Math.round((new Date(s)-today)/(864e5)); }
 
 // 계획 자체가 "착공 기준 몇 개월"로 짜여 있어서, 지연·잔여도 일수 대신 개월로 보여준다.
 // 1개월 = 30일 기준 (업무 시점 dm 을 날짜로 바꿀 때 쓰는 기준과 동일).
+// 이번 달에 마감인 업무 = 임박. 사람이 고르는 값이 아니라 목표일로 그때그때 판단한다.
+// (예전 "주의" 상태를 없애고 이걸로 대신한다)
+// 공종 카드에 쓰는 집계 — 실제 완료율(완료 처리된 업무 기준)과 지연·임박 건수.
+// 예전에는 "시점이 지난 업무 비율"(계획 경과율)을 완료율처럼 보여줘서 오해를 샀다.
+function discCardStat(site, disc, allDiscs){
+  const cats = disc.key===null
+    ? [].concat(...allDiscs.map(d => d.categories.map((c,ci) => ({ d, c, ci }))))
+    : disc.categories.map((c,ci) => ({ d:disc, c, ci }));
+  let total = 0, doneCnt = 0, overdue = 0, imminent = 0;
+  cats.forEach(({d, c, ci}) => c.tasks.forEach((task, ti) => {
+    total++;
+    const st = taskState(getDiscTaskStatus(site, taskKey(d.key, ci, ti), task));
+    if(st === 'done') doneCnt++;
+    else if(st === 'overdue') overdue++;
+    else if(st === 'imminent') imminent++;
+  }));
+  const pct = Math.round(doneCnt / Math.max(total, 1) * 100);
+  return { total, done: doneCnt, overdue, imminent, pct,
+    label: overdue ? `지연 ${overdue}건` : imminent ? `임박 ${imminent}건` : '정상',
+    color: overdue ? '#dc2626' : imminent ? '#d97706' : '#16a34a' };
+}
+
+function isImminent(t){
+  if(!t || t.st==='done' || !t.deadline) return false;
+  if(dLeft(t.deadline) < 0) return false;          // 이미 지났으면 지연
+  const d = parseYmd(t.deadline), n = parseYmd(today);
+  return d.y===n.y && d.m===n.m;
+}
+// 화면에 보여줄 상태 — 완료 / 지연 / 임박 / 진행중 / 대기
+function taskState(t){
+  if(!t) return 'pending';
+  if(t.st==='done') return 'done';
+  if(dLeft(t.deadline) < 0) return 'overdue';
+  if(isImminent(t)) return 'imminent';
+  return t.st==='ontrack' ? 'ontrack' : 'pending';
+}
+
 function fmtMonths(days){
   // 하루만 지나도 1개월로 센다 (0.5개월 같은 표기 없이 올림)
   return Math.ceil(Math.abs(days) / 30) + '개월';
@@ -1986,11 +2020,12 @@ function renderHQDiscMatrix(discKey){
       }
       const t=it.status;
       const dl=dLeft(t.deadline);
+      const dst=taskState(t);
       let badgeTxt;
-      if(t.st==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
-      else if(t.st==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
-      else if(t.st==='warning') badgeTxt='<span class="badge warning">⚠ 주의</span>';
-      else if(t.st==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
+      if(dst==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
+      else if(dst==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
+      else if(dst==='imminent') badgeTxt='<span class="badge imminent">⏰ 임박</span>';
+      else if(dst==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
       else badgeTxt='<span class="badge pending">— 대기</span>';
       let ddayHtml='';
       if(t.st!=='done'&&t.st!=='pending'){
@@ -2261,7 +2296,7 @@ function buildDiscAccordionHtml(site, disc, items, fromPopup){
   const stBadge = {
     done:'<span class="badge done">✓ 완료</span>',
     ontrack:'<span class="badge ontrack">● 진행중</span>',
-    warning:'<span class="badge warning">⚠ 주의</span>',
+    imminent:'<span class="badge imminent">⏰ 임박</span>',
     overdue:'<span class="badge overdue">! 지연</span>',
     pending:'<span class="badge pending">— 대기</span>',
   };
@@ -2339,7 +2374,7 @@ function renderFieldDiscipline(){
   const items = collectDiscTasks(site, disc);
   const total = items.length;
   const done = items.filter(it=>it.status.st==='done').length;
-  const urgent = items.filter(it=>it.status.st==='overdue' || (it.status.st!=='done'&&it.status.st!=='pending'&&dLeft(it.status.deadline)<=3&&dLeft(it.status.deadline)>=0)).length;
+  const urgent = items.filter(it=>{ const st=taskState(it.status); return st==='overdue' || st==='imminent'; }).length;
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById('fd-total').textContent=total;
   document.getElementById('fd-done').textContent=done;
@@ -2424,11 +2459,12 @@ function renderFieldDiscipline(){
   sorted.forEach(it=>{
     const t=it.status;
     const dl=dLeft(t.deadline);
+    const dst=taskState(t);
     let badgeTxt;
-    if(t.st==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
-    else if(t.st==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
-    else if(t.st==='warning') badgeTxt='<span class="badge warning">⚠ 주의</span>';
-    else if(t.st==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
+    if(dst==='done')     badgeTxt='<span class="badge done">✓ 완료</span>';
+    else if(dst==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
+    else if(dst==='imminent') badgeTxt='<span class="badge imminent">⏰ 임박</span>';
+    else if(dst==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
     else badgeTxt='<span class="badge pending">— 대기</span>';
     let ddayHtml='';
     if(t.st!=='done'&&t.st!=='pending'){
@@ -2477,9 +2513,9 @@ function fillCellWork(siteId, discKey, catIdx, taskIdx){
   const key = taskKey(discKey, catIdx, taskIdx);
   const t = getDiscTaskStatus(site, key, task);
   focusedCell = { mode:'disc', siteId, key, discKey, catIdx, taskIdx };
-  const stLabel={done:'✓ 완료',ontrack:'● 진행중',warning:'⚠ 주의',overdue:'! 지연',pending:'— 대기'};
+  const stLabel={done:'✓ 완료',ontrack:'● 진행중',imminent:'⏰ 임박',overdue:'! 지연',pending:'— 대기'};
   document.getElementById('cell-title').textContent = task.name;
-  document.getElementById('cell-sub').textContent = `${site.name} · ${disc.name}/${cat.name} · ${stLabel[t.st]||''}`;
+  document.getElementById('cell-sub').textContent = `${site.name} · ${disc.name}/${cat.name} · ${stLabel[taskState(t)]||''}`;
   // 목표일은 프로세스맵 시점에서 자동 계산되므로 이 팝업에서는 다루지 않는다
   document.getElementById('cell-memo').value = t.memo||'';
   updateStatusBtns(t.st||'pending');
@@ -2561,15 +2597,15 @@ function computeDiscSummary(site, discName){
   const total = items.length;
   const done = items.filter(it=>it.status.st==='done').length;
   const overdue = items.filter(it=>it.status.st==='overdue').length;
-  const warning = items.filter(it=>it.status.st==='warning').length;
-  return { disc, items, total, done, overdue, warning };
+  const imminent = items.filter(it=>isImminent(it.status)).length;
+  return { disc, items, total, done, overdue, imminent };
 }
 
 function discSummaryChipHtml(site, discName){
   const sum = computeDiscSummary(site, discName);
   if(!sum || !sum.total) return '';
-  const color = sum.overdue>0?'var(--r)':sum.warning>0?'var(--y)':'var(--g)';
-  const bg    = sum.overdue>0?'var(--rb)':sum.warning>0?'var(--yb)':'var(--gb)';
+  const color = sum.overdue>0?'var(--r)':sum.imminent>0?'var(--y)':'var(--g)';
+  const bg    = sum.overdue>0?'var(--rb)':sum.imminent>0?'var(--yb)':'var(--gb)';
   return `<span onclick="event.stopPropagation();openDiscHQPopup(${site.id},'${discName}')"
       style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:800;background:${bg};color:${color};cursor:pointer;white-space:nowrap">
       🏗️ ${discName} ${sum.done}/${sum.total}${sum.overdue?` · 지연 ${sum.overdue}`:''}
@@ -2599,13 +2635,13 @@ function renderManagerSummary(){
   syncStageOverdue(site);
   const schedule = getSiteSchedule(siteId);
 
-  let totalTasks=0, doneTasks=0, normalDisc=0, warningDisc=0, overdueDisc=0, noFile=0, dueWeek=0;
+  let totalTasks=0, doneTasks=0, normalDisc=0, imminentDisc=0, overdueDisc=0, noFile=0, dueWeek=0;
   const sums = schedule.disciplines.map(disc=>{
     const sum = computeDiscSummary(site, disc.name);
     if(!sum) return null;
     totalTasks += sum.total; doneTasks += sum.done;
     if(sum.overdue>0) overdueDisc++;
-    else if(sum.warning>0) warningDisc++;
+    else if(sum.imminent>0) imminentDisc++;
     else normalDisc++;
     sum.items.forEach(it=>{
       if(it.status.st!=='done' && !it.status.file) noFile++;
@@ -2617,7 +2653,7 @@ function renderManagerSummary(){
 
   document.getElementById('mgr-sum-total').textContent = totalTasks;
   document.getElementById('mgr-sum-normal').textContent = normalDisc;
-  document.getElementById('mgr-sum-warning').textContent = warningDisc;
+  document.getElementById('mgr-sum-warning').textContent = imminentDisc;
   document.getElementById('mgr-sum-overdue').textContent = overdueDisc;
   document.getElementById('mgr-sum-week').textContent = dueWeek;
   document.getElementById('mgr-sum-nofile').textContent = noFile;
@@ -2628,8 +2664,8 @@ function renderManagerSummary(){
     const pct = sum.total ? Math.round(sum.done/sum.total*100) : 0;
     const withFile = sum.items.filter(it=>it.status.file).length;
     const filePct = sum.total ? Math.round(withFile/sum.total*100) : 0;
-    const stColor = sum.overdue>0?'var(--r)':sum.warning>0?'var(--y)':'var(--g)';
-    const stLabel = sum.overdue>0?`지연 ${sum.overdue}건`:sum.warning>0?`주의 ${sum.warning}건`:'정상';
+    const stColor = sum.overdue>0?'var(--r)':sum.imminent>0?'var(--y)':'var(--g)';
+    const stLabel = sum.overdue>0?`지연 ${sum.overdue}건`:sum.imminent>0?`임박 ${sum.imminent}건`:'정상';
     // 행 클릭 → 공종별 프로세스맵 탭으로 이동해 해당 공종만 필터링 (구 "상세" 버튼과 동일 동작이라 버튼은 제거하고 행 클릭 하나로 통일)
     const goMap = `mgrFilterDisc='${sum.disc.key}';switchView('procmap')`;
     return `<tr style="cursor:pointer;border-top:1px solid var(--bd)" onclick="${goMap}">
@@ -2768,32 +2804,25 @@ function renderHqArch(){
 }
 
 function renderHqArchKpi(){
-  let normalSites=0, warningSites=0, overdueSites=0, noFile=0, dueWeek=0;
+  // 정상 = 지연 없는 현장, 임박 업무 = 이번 달 마감인 업무 건수
+  let normalSites=0, overdueSites=0, imminentTasks=0;
   const list = activeSitesList();
   const discNames = hqOverviewDiscNames();
   list.forEach(site=>{
-    let sTotal=0, sOverdue=0, sWarning=0;
+    let sTotal=0, sOverdue=0;
     discNames.forEach(discName=>{
       const sum = computeDiscSummary(site,discName);
       if(!sum) return;
-      sTotal += sum.total; sOverdue += sum.overdue; sWarning += sum.warning;
-      sum.items.forEach(it=>{
-        if(it.status.st!=='done' && !it.status.file) noFile++;
-        const dl = dLeft(it.status.deadline);
-        if(it.status.st!=='done' && dl>=0 && dl<=7) dueWeek++;
-      });
+      sTotal += sum.total; sOverdue += sum.overdue; imminentTasks += sum.imminent;
     });
     if(sTotal===0) return;
     if(sOverdue>0) overdueSites++;
-    else if(sWarning>0) warningSites++;
     else normalSites++;
   });
   document.getElementById('ha-kpi-sites').textContent = list.length;
   document.getElementById('ha-kpi-normal').textContent = normalSites;
-  document.getElementById('ha-kpi-warning').textContent = warningSites;
+  document.getElementById('ha-kpi-imminent').textContent = imminentTasks;
   document.getElementById('ha-kpi-overdue').textContent = overdueSites;
-  document.getElementById('ha-kpi-week').textContent = dueWeek;
-  document.getElementById('ha-kpi-nofile').textContent = noFile;
 }
 
 function renderHqArchTable(){
@@ -2801,18 +2830,18 @@ function renderHqArchTable(){
   const discNames = hqOverviewDiscNames();
   const popupDiscName = hqDisc ? hqDiscName(hqDisc) : (discNames[0]||'건축');
   tbody.innerHTML = activeSitesList().map(site=>{
-    let sTotal=0, sDone=0, sOverdue=0, sWarning=0, sWithFile=0;
+    let sTotal=0, sDone=0, sOverdue=0, sImminent=0, sWithFile=0;
     discNames.forEach(discName=>{
       const sum = computeDiscSummary(site,discName);
       if(!sum) return;
-      sTotal+=sum.total; sDone+=sum.done; sOverdue+=sum.overdue; sWarning+=sum.warning;
+      sTotal+=sum.total; sDone+=sum.done; sOverdue+=sum.overdue; sImminent+=sum.imminent;
       sWithFile += sum.items.filter(it=>it.status.file).length;
     });
     if(sTotal===0) return '';
     const pct = Math.round(sDone/sTotal*100);
     const filePct = Math.round(sWithFile/sTotal*100);
-    const stColor = sOverdue>0?'var(--r)':sWarning>0?'var(--y)':'var(--g)';
-    const stLabel = sOverdue>0?`지연 ${sOverdue}건`:sWarning>0?`주의 ${sWarning}건`:'정상';
+    const stColor = sOverdue>0?'var(--r)':sImminent>0?'var(--y)':'var(--g)';
+    const stLabel = sOverdue>0?`지연 ${sOverdue}건`:sImminent>0?`임박 ${sImminent}건`:'정상';
     return `<tr style="cursor:pointer;border-top:1px solid var(--bd)" onclick="hqArchSiteId=${site.id};document.getElementById('ha-timeline-sel').value=${site.id};renderHqArchTimeline()">
       <td style="padding:10px 12px;font-weight:800;font-size:13px">${site.name}</td>
       <td style="padding:10px 12px;text-align:center;font-size:12px">${pct}% <span style="color:var(--t3);font-weight:600">(${sDone}/${sTotal})</span></td>
@@ -2926,12 +2955,11 @@ function renderHqArchTimeline(){
           const taskIdx = cat.tasks.indexOf(task);
           const key = taskKey(disc.key, ci, taskIdx);
           const t = getDiscTaskStatus(site, key, task);
-          let st = t.st;
-          if(st==='pending' && dLeft(t.deadline)<0) st='overdue';
+          let st = taskState(t);
           let badgeTxt='', ddayHtml='', fileHtml='';
           if(st==='done') badgeTxt='<span class="badge done">✓ 완료</span>';
           else if(st==='ontrack') badgeTxt='<span class="badge ontrack">● 진행중</span>';
-          else if(st==='warning') badgeTxt='<span class="badge warning">⚠ 주의</span>';
+          else if(st==='imminent') badgeTxt='<span class="badge imminent">⏰ 임박</span>';
           else if(st==='overdue') badgeTxt='<span class="badge overdue">! 지연</span>';
           if(st!=='done' && st!=='pending'){
             const dl=dLeft(t.deadline);
@@ -2939,7 +2967,7 @@ function renderHqArchTimeline(){
             ddayHtml=`<div class="dday ${dc}">${fmtDday(dl)}</div>`;
           }
           if(t.file) fileHtml='<span class="ftag yes">📎 제출</span>';
-          const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
+          const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',imminent:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
           html += `<div class="task-clickable" onclick="openDiscCell(${site.id},'${disc.key}',${ci},${taskIdx})" style="background:${cellBgSt};border-radius:7px;padding:5px 7px;margin-bottom:4px;">
             <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px;white-space:normal;line-height:1.4;word-break:keep-all">${task.name}</div>
             <div style="display:flex;flex-wrap:wrap;gap:3px;align-items:center">${badgeTxt}${ddayHtml}${fileHtml}</div>
@@ -2966,7 +2994,7 @@ function filter(status){
     const ts=tr.dataset.status;
     tr.style.display=(status==='all'||ts==='sample'||ts===status)?'':'none';
   });
-  const lbl={all:'',green:'정상 현장만 표시',yellow:'주의 현장만 표시',red:'지연 현장만 표시'};
+  const lbl={all:'',green:'정상 현장만 표시',yellow:'임박 현장만 표시',red:'지연 현장만 표시'};
   document.getElementById('filter-txt').textContent=lbl[status];
 }
 
@@ -3098,9 +3126,8 @@ function updateStatusBtns(st){
     ontrack:  {label:'● 진행중', bg:'var(--bb)',    color:'var(--acc)', border:'var(--acc)'},
     done:     {label:'✓ 완료',   bg:'var(--gb)',    color:'var(--g)',   border:'var(--g)'},
     overdue:  {label:'! 지연',   bg:'var(--rb)',    color:'var(--r)',   border:'var(--r)'},
-    warning:  {label:'⚠ 주의',   bg:'var(--yb)',    color:'var(--y)',   border:'var(--y)'},
   };
-  ['pending','ontrack','done','overdue','warning'].forEach(s=>{
+  ['pending','ontrack','done','overdue'].forEach(s=>{
     const btn = document.getElementById(`st-btn-${s}`);
     if(!btn) return;
     const active = s===st;
@@ -3139,14 +3166,14 @@ function updateSiteStatus(siteId){
   const site = sites[siteId];
   if(!site) return;
   const schedule = getSiteSchedule(siteId);
-  let hasOverdue=false, hasWarning=false;
+  let hasOverdue=false, hasImminent=false;
   schedule.disciplines.forEach(disc=>{
     const sum = computeDiscSummary(site, disc.name);
     if(!sum) return;
     if(sum.overdue>0) hasOverdue=true;
-    else if(sum.warning>0) hasWarning=true;
+    else if(sum.imminent>0) hasImminent=true;
   });
-  site.status = hasOverdue ? 'red' : hasWarning ? 'yellow' : 'green';
+  site.status = hasOverdue ? 'red' : hasImminent ? 'yellow' : 'green';
 }
 
 // 전체 현장 × 5개 공종 지연 현황 (STAGES 폐지 후 전체 공종 기준으로 일반화)
@@ -5568,16 +5595,11 @@ function renderManagerMap(){
   const cardList = [{key:null, name:'전체', color:'#6366f1'}, ...schedule.disciplines];
   cards.innerHTML = cardList.map(disc=>{
     const isActive = mgrFilterDisc === disc.key;
-    const allTasks = disc.key===null
-      ? schedule.disciplines.flatMap(d=>d.categories.flatMap(c=>c.tasks))
-      : disc.categories.flatMap(c=>c.tasks);
-    const total = allTasks.length;
-    const done  = allTasks.filter(t=>t.dm < curDm).length;
-    const pct   = Math.round(done/Math.max(total,1)*100);
+    const stat = discCardStat(sites[siteId], disc, schedule.disciplines);
+    const { total, pct } = stat;
     const col   = disc.color || '#6366f1';
     const ring  = isActive ? `box-shadow:0 0 0 2.5px ${col};` : '';
-    const statusTxt = pct>=80?'정상':pct>=50?'진행중':'준비중';
-    const statusCol = pct>=80?'#16a34a':pct>=50?'#315efb':'#f59e0b';
+    const statusTxt = stat.label, statusCol = stat.color;
     const filterVal = disc.key===null ? 'null' : disc.key;
     return `<div
       onclick="setMgrFilter('${filterVal}')"
@@ -5589,7 +5611,7 @@ function renderManagerMap(){
         <div style="height:5px;border-radius:3px;background:${col};width:${pct}%;transition:width .3s"></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;font-weight:700;color:var(--t2)">${pct}%</span>
+        <span style="font-size:13px;font-weight:700;color:var(--t2)">완료 ${stat.done}/${total} · ${pct}%</span>
         <span style="font-size:11px;font-weight:600;color:${statusCol}">${statusTxt}</span>
       </div>
     </div>`;
@@ -5718,14 +5740,14 @@ function renderMgrProcessMap(curDm){
           const taskIdx0 = cat.tasks.indexOf(task);
           const key = taskKey(disc.key, ci, taskIdx0);
           const t = getDiscTaskStatus(site, key, task);
-          st = t.st;
+          st = taskState(t);
           badgeTxt = st==='done' ? '<span class="badge done">✓ 완료</span>':
                      st==='ontrack' ? '<span class="badge ontrack">● 진행중</span>':
                      st==='overdue' ? '<span class="badge overdue">! 지연</span>':
-                     st==='warning' ? '<span class="badge warning">⚠ 주의</span>': '';
+                     st==='imminent' ? '<span class="badge imminent">⏰ 임박</span>': '';
           if(t.file) fileHtml = '<span class="ftag yes">📎 제출</span>';
 
-          const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent','':'transparent'}[st]||'transparent';
+          const cellBgSt = {done:'var(--gb)',ontrack:'var(--bb)',imminent:'var(--yb)',overdue:'var(--rb)',pending:'transparent','':'transparent'}[st]||'transparent';
           const taskIdx = cat.tasks.indexOf(task);
           const pendingReq = pendingChangeFor(siteId, disc.key, ci, task.name);
           const pendingBadge = pendingReq ? '<span style="font-size:9px;font-weight:800;color:var(--y);background:rgba(245,158,11,.15);border-radius:5px;padding:1px 6px">🕓 검토중</span>' : '';
@@ -5889,12 +5911,8 @@ function renderFieldProcessMap(){
   const cards = document.getElementById('field-disc-cards');
   const cardList = [{key:null, name:'전체', color:'#6366f1'}, ...schedule.disciplines];
   cards.innerHTML = cardList.map(disc=>{
-    const allTasks = disc.key===null
-      ? schedule.disciplines.flatMap(d=>d.categories.flatMap(c=>c.tasks))
-      : disc.categories.flatMap(c=>c.tasks);
-    const total = allTasks.length;
-    const done  = allTasks.filter(t=>t.dm < curDm).length;
-    const pct   = Math.round(done/Math.max(total,1)*100);
+    const stat = discCardStat(site, disc, schedule.disciplines);
+    const { total, pct } = stat;
     const col   = disc.color || '#6366f1';
     const filterVal = disc.key===null ? 'null' : disc.key;
     return `<div onclick="setFieldDiscFilter('${filterVal}')"
@@ -5904,7 +5922,8 @@ function renderFieldProcessMap(){
       <div style="height:4px;background:var(--bd2);border-radius:3px;margin-bottom:5px;overflow:hidden">
         <div style="height:4px;border-radius:3px;background:${col};width:${pct}%"></div>
       </div>
-      <div style="font-size:11px;font-weight:700;color:var(--t2)">${pct}%</div>
+      <div style="font-size:11px;font-weight:700;color:var(--t2)">완료 ${stat.done}/${total} · ${pct}%</div>
+      <div style="font-size:10px;font-weight:700;color:${stat.color};margin-top:2px">${stat.label}</div>
     </div>`;
   }).join('');
 
@@ -6164,13 +6183,13 @@ function renderFieldMap(curDm, filterKey){
           // 전기 포함 5개 공종 전체 동일 — 공정 현황 탭과 같은 실제 저장된 업무 상태(taskStatus)를 그대로 반영
           const key = taskKey(disc.key, ci, taskIdx);
           const t = getDiscTaskStatus(site, key, task);
-          st = t.st;
+          st = taskState(t);
           if(st==='done') badgeTxt='<span class="badge done" style="font-size:10px">✓ 완료</span>';
           else if(st==='ontrack') badgeTxt='<span class="badge ontrack" style="font-size:10px">● 진행중</span>';
           else if(st==='overdue') badgeTxt='<span class="badge overdue" style="font-size:10px">! 지연</span>';
-          else if(st==='warning') badgeTxt='<span class="badge warning" style="font-size:10px">⚠ 주의</span>';
+          else if(st==='imminent') badgeTxt='<span class="badge imminent" style="font-size:10px">⏰ 임박</span>';
           if(t.file) fileHtml='<span class="ftag yes" style="font-size:10px">📎</span>';
-          const bgSt={done:'var(--gb)',ontrack:'var(--bb)',warning:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
+          const bgSt={done:'var(--gb)',ontrack:'var(--bb)',imminent:'var(--yb)',overdue:'var(--rb)',pending:'transparent'}[st]||'transparent';
           const pendingReq = pendingChangeFor(siteId, disc.key, ci, task.name);
           const pendingBadge = pendingReq ? '<span style="font-size:9px;font-weight:800;color:var(--y);background:rgba(245,158,11,.15);border-radius:5px;padding:1px 5px">🕓 검토중</span>' : '';
           const dragAttrs = editing
