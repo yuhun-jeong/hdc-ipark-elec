@@ -1990,7 +1990,7 @@ function renderHQDiscMatrix(discKey){
         <div class="site-meta">클릭하여 업로드 · URL 연결</div>
       </div></div></td>`;
   items.forEach(it=>{
-    html+=`<td class="td-st sample"><div class="cell">${renderTaskAsset(it.key,'form',it.task)}</div></td>`;
+    html+=`<td class="td-st sample"><div class="cell">${renderTaskAsset(assetKey(disc.key,it.ci,it.task.name),'form',it.task)}</div></td>`;
   });
   html+='</tr>';
   html+=`<tr style="background:rgba(245,158,11,.02)">
@@ -2001,7 +2001,7 @@ function renderHQDiscMatrix(discKey){
         <div class="site-meta">클릭하여 업로드 · URL 연결</div>
       </div></div></td>`;
   items.forEach(it=>{
-    html+=`<td class="td-st" style="background:rgba(245,158,11,.03)"><div class="cell">${renderTaskAsset(it.key,'guide',it.task)}</div></td>`;
+    html+=`<td class="td-st" style="background:rgba(245,158,11,.03)"><div class="cell">${renderTaskAsset(assetKey(disc.key,it.ci,it.task.name),'guide',it.task)}</div></td>`;
   });
   html+='</tr>';
 
@@ -2435,7 +2435,7 @@ function renderFieldDiscipline(){
         <div class="site-meta">업무별 표준양식</div>
       </div></div></td>`;
   sorted.forEach(it=>{
-    tbHtml+=`<td class="td-st sample"><div class="cell">${renderTaskAssetView(it.key,'form',it.task)}</div></td>`;
+    tbHtml+=`<td class="td-st sample"><div class="cell">${renderTaskAssetView(assetKey(disc.key,it.ci,it.task.name),'form',it.task)}</div></td>`;
   });
   tbHtml+='</tr>';
 
@@ -2448,7 +2448,7 @@ function renderFieldDiscipline(){
         <div class="site-meta">업무별 관련 지침</div>
       </div></div></td>`;
   sorted.forEach(it=>{
-    tbHtml+=`<td class="td-st" style="background:rgba(245,158,11,.03)"><div class="cell">${renderTaskAssetView(it.key,'guide',it.task)}</div></td>`;
+    tbHtml+=`<td class="td-st" style="background:rgba(245,158,11,.03)"><div class="cell">${renderTaskAssetView(assetKey(disc.key,it.ci,it.task.name),'guide',it.task)}</div></td>`;
   });
   tbHtml+='</tr>';
 
@@ -5132,6 +5132,11 @@ function downloadTaskAsset(url, name){
 
 // 양식/지침은 여러 개 등록될 수 있다. 저장된 값이 예전 단일 객체든 새 배열이든
 // 항상 배열로 꺼내 쓰기 위한 도우미.
+// 양식·지침은 업무 "순번"이 아니라 "업무명"으로 붙인다.
+// 순번으로 붙이면 현장에서 업무를 추가·삭제해 순번이 밀릴 때 다른 업무에 붙어버린다.
+// (실제로 149개 키 중 128개가 현장마다 다른 업무를 가리키고 있었다)
+function assetKey(discKey, catIdx, taskName){ return discKey + '|' + catIdx + '|' + taskName; }
+
 function assetList(kind, key){
   const store = kind==='form' ? taskForms : taskGuides;
   const v = store[key];
@@ -5216,8 +5221,9 @@ function openTaskModal(discKey, catIdx, taskIdx, siteId){
   document.getElementById('ti-id').textContent = discKey.toUpperCase()+'-'+String(taskIdx+1).padStart(3,'0');
   document.getElementById('ti-when').textContent = fmtDMonth(task.dm);
   document.getElementById('ti-cat').textContent = disc.name+' / '+cat.name;
-  document.getElementById('ti-form').innerHTML = renderTaskAsset(key, 'form', task);
-  document.getElementById('ti-guide').innerHTML = renderTaskAsset(key, 'guide', task);
+  const aKey = assetKey(discKey, catIdx, task.name);
+  document.getElementById('ti-form').innerHTML = renderTaskAsset(aKey, 'form', task);
+  document.getElementById('ti-guide').innerHTML = renderTaskAsset(aKey, 'guide', task);
   document.getElementById('ti-source').textContent = disc.name+' 프로세스맵';
   const msMatches = (schedule.milestones||MILESTONES).filter(m=>task.dm>=m.s && task.dm<=m.e);
   document.getElementById('ti-milestone').innerHTML = msMatches.length
