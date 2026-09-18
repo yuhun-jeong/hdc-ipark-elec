@@ -2223,7 +2223,13 @@ function getDiscTaskStatus(site, key, task){
   // 목표일은 전공종 프로세스맵의 업무 시점(dm)에서만 정해진다.
   // 예전에 있던 "직접 수정" 예외는 없앴으므로 예외 없이 항상 시점을 따라간다.
   t.deadline = discTaskDeadline(site, task);
-  if(t.st!=='done' && dLeft(t.deadline)<0) t.st='overdue';
+  // 지연 판정: 목표일이 지났고 완료가 아니면 지연.
+  // 목표일이 아직 안 지났으면(뒤 칸으로 옮겨진 경우 포함) 지연을 풀어 대기로 되돌린다.
+  // 예전에는 지연으로 올리기만 하고 내리지 않아, 과거 칸에서 지연이던 업무를 미래로 옮겨도 계속 지연으로 보였다.
+  if(t.st!=='done'){
+    if(dLeft(t.deadline)<0) t.st='overdue';
+    else if(t.st==='overdue') t.st='pending';
+  }
   return t;
 }
 
