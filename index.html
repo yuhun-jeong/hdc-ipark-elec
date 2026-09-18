@@ -469,7 +469,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
         <div style="padding:0 16px;max-height:230px;overflow:auto" id="ha-delay-list"></div>
       </div>
       <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
-        <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>📅 임박 업무(2주 이내)</span><span id="ha-next-count" style="color:var(--y);font-size:12px;font-weight:800"></span></div>
+        <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>⏰ 임박 업무(이번 달)</span><span id="ha-next-count" style="color:var(--y);font-size:12px;font-weight:800"></span></div>
         <div style="padding:0 16px;max-height:230px;overflow:auto" id="ha-next-list"></div>
       </div>
     </div>
@@ -633,12 +633,9 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
       <div class="kpi-row" style="margin-bottom:16px">
         <div class="kpi"><div class="kpi-ico" style="background:rgba(49,94,251,.1)">📋</div><div><div class="kpi-num" id="mgr-sum-total">-</div><div class="kpi-lbl">전체 업무</div></div></div>
         <div class="kpi-vr"></div>
-        <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">🟢</div><div><div class="kpi-num" style="color:var(--g)" id="mgr-sum-normal">-</div><div class="kpi-lbl">정상 공종</div></div></div>
-        <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">⏰</div><div><div class="kpi-num" style="color:var(--y)" id="mgr-sum-warning">-</div><div class="kpi-lbl">임박 공종</div></div></div>
-        <div class="kpi"><div class="kpi-ico" style="background:var(--rm)">🔴</div><div><div class="kpi-num" style="color:var(--r)" id="mgr-sum-overdue">-</div><div class="kpi-lbl">지연 공종</div></div></div>
-        <div class="kpi-vr"></div>
-        <div class="kpi"><div class="kpi-ico" style="background:rgba(245,158,11,.1)">📅</div><div><div class="kpi-num" style="color:var(--y)" id="mgr-sum-week">-</div><div class="kpi-lbl">이번주 마감</div></div></div>
-        <div class="kpi"><div class="kpi-ico" style="background:rgba(239,68,68,.08)">📁</div><div><div class="kpi-num" style="color:var(--r)" id="mgr-sum-nofile">-</div><div class="kpi-lbl">미제출</div></div></div>
+        <div class="kpi"><div class="kpi-ico" style="background:var(--gm)">✅</div><div><div class="kpi-num" style="color:var(--g)" id="mgr-sum-normal">-</div><div class="kpi-lbl">완료</div></div></div>
+        <div class="kpi"><div class="kpi-ico" style="background:var(--ym)">⏰</div><div><div class="kpi-num" style="color:var(--y)" id="mgr-sum-warning">-</div><div class="kpi-lbl">임박 업무</div></div></div>
+        <div class="kpi"><div class="kpi-ico" style="background:var(--rm)">🔴</div><div><div class="kpi-num" style="color:var(--r)" id="mgr-sum-overdue">-</div><div class="kpi-lbl">지연 업무</div></div></div>
       </div>
       <div style="display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:14px">
         <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
@@ -661,7 +658,7 @@ select.site-sel:focus{outline:none;border-color:var(--acc);}
             <div style="padding:0 16px;max-height:230px;overflow:auto" id="mgr-sum-delay-list"></div>
           </div>
           <div style="background:var(--surf1);border:1px solid var(--bd);border-radius:14px;overflow:hidden">
-            <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>📅 임박 업무(2주 이내)</span><span id="mgr-sum-next-count" style="color:var(--y);font-size:12px;font-weight:800"></span></div>
+            <div style="padding:13px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800;display:flex;justify-content:space-between;align-items:center"><span>⏰ 임박 업무(이번 달)</span><span id="mgr-sum-next-count" style="color:var(--y);font-size:12px;font-weight:800"></span></div>
             <div style="padding:0 16px;max-height:230px;overflow:auto" id="mgr-sum-next-list"></div>
           </div>
         </div>
@@ -2635,28 +2632,20 @@ function renderManagerSummary(){
   syncStageOverdue(site);
   const schedule = getSiteSchedule(siteId);
 
-  let totalTasks=0, doneTasks=0, normalDisc=0, imminentDisc=0, overdueDisc=0, noFile=0, dueWeek=0;
+  // 본사 대시보드와 단위를 맞추기 위해 공종 수가 아니라 업무 건수로 센다
+  let totalTasks=0, doneTasks=0, imminentTasks=0, overdueTasks=0;
   const sums = schedule.disciplines.map(disc=>{
     const sum = computeDiscSummary(site, disc.name);
     if(!sum) return null;
     totalTasks += sum.total; doneTasks += sum.done;
-    if(sum.overdue>0) overdueDisc++;
-    else if(sum.imminent>0) imminentDisc++;
-    else normalDisc++;
-    sum.items.forEach(it=>{
-      if(it.status.st!=='done' && !it.status.file) noFile++;
-      const dl = dLeft(it.status.deadline);
-      if(it.status.st!=='done' && dl>=0 && dl<=7) dueWeek++;
-    });
+    imminentTasks += sum.imminent; overdueTasks += sum.overdue;
     return sum;
   }).filter(Boolean);
 
   document.getElementById('mgr-sum-total').textContent = totalTasks;
-  document.getElementById('mgr-sum-normal').textContent = normalDisc;
-  document.getElementById('mgr-sum-warning').textContent = imminentDisc;
-  document.getElementById('mgr-sum-overdue').textContent = overdueDisc;
-  document.getElementById('mgr-sum-week').textContent = dueWeek;
-  document.getElementById('mgr-sum-nofile').textContent = noFile;
+  document.getElementById('mgr-sum-normal').textContent = doneTasks;
+  document.getElementById('mgr-sum-warning').textContent = imminentTasks;
+  document.getElementById('mgr-sum-overdue').textContent = overdueTasks;
 
   // 공종별 비교표 — 행 클릭 시 전공종 프로세스맵 탭으로 이동해 해당 공종만 필터링
   const tbody = document.getElementById('mgr-sum-table-body');
@@ -2683,7 +2672,7 @@ function renderManagerSummary(){
       if(it.status.st==='overdue') delay.push({disc:sum.disc, it});
       else if(it.status.st!=='done'){
         const dl=dLeft(it.status.deadline);
-        if(dl>=0 && dl<=14) next.push({disc:sum.disc, it, dl});
+        if(isImminent(it.status)) next.push({disc:sum.disc, it, dl});
       }
     });
   });
@@ -2863,7 +2852,7 @@ function renderHqArchLists(){
         if(it.status.st==='overdue') delay.push({site,disc:sum.disc,it});
         else if(it.status.st!=='done'){
           const dl=dLeft(it.status.deadline);
-          if(dl>=0 && dl<=14) next.push({site,disc:sum.disc,it,dl});
+          if(isImminent(it.status)) next.push({site,disc:sum.disc,it,dl});
         }
       });
     });
@@ -2926,7 +2915,8 @@ function renderHqArchTimeline(){
     </th>`;
   });
   html += '</tr></thead><tbody>';
-  html += buildMilestoneRows(ALL_DMS, schedule.milestones);
+  // 마일스톤 바 — 요청에 따라 우선 숨김. 다시 보이려면 아래 주석만 풀면 됩니다.
+  // html += buildMilestoneRows(ALL_DMS, schedule.milestones);
 
   visibleDiscs.forEach(disc=>{
     disc.categories.forEach((cat,ci)=>{
@@ -5668,7 +5658,8 @@ function renderMgrProcessMap(curDm){
   html += '</tr></thead><tbody>';
 
   // ── 마일스톤 바 공정표 (최상단, 현장별 스케줄)
-  html += buildMilestoneRows(ALL_DMS, schedule.milestones);
+  //    요청에 따라 우선 숨김. 다시 보이려면 아래 한 줄의 주석만 풀면 됩니다.
+  // html += buildMilestoneRows(ALL_DMS, schedule.milestones);
 
   // ── 행: 공종 × 업무구분
   visibleDiscs.forEach((disc, di)=>{
