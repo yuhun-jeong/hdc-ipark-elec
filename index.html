@@ -1837,7 +1837,7 @@ function discCardStat(site, disc, allDiscs){
   let total = 0, doneCnt = 0, overdue = 0, imminent = 0;
   cats.forEach(({d, c, ci}) => c.tasks.forEach((task, ti) => {
     total++;
-    const st = taskState(getDiscTaskStatus(site, taskKey(d.key, ci, ti), task));
+    const st = taskState(getDiscTaskStatus(site, taskKey(d.key, ci, task.name), task));
     if(st === 'done') doneCnt++;
     else if(st === 'overdue') overdue++;
     else if(st === 'imminent') imminent++;
@@ -2285,7 +2285,7 @@ function collectDiscTasks(site, disc){
   const items=[];
   disc.categories.forEach((cat,ci)=>{
     cat.tasks.forEach((task,ti)=>{
-      const key = taskKey(disc.key, ci, ti);
+      const key = taskKey(disc.key, ci, task.name);
       const status = getDiscTaskStatus(site, key, task);
       items.push({ cat, ci, ti, task, key, status });
     });
@@ -2514,7 +2514,7 @@ function fillCellWork(siteId, discKey, catIdx, taskIdx){
   const task = cat && cat.tasks[taskIdx];
   const site = sites[siteId];
   if(!task || !site) return null;
-  const key = taskKey(discKey, catIdx, taskIdx);
+  const key = taskKey(discKey, catIdx, task.name);
   const t = getDiscTaskStatus(site, key, task);
   focusedCell = { mode:'disc', siteId, key, discKey, catIdx, taskIdx };
   const stLabel={done:'✓ 완료',ontrack:'● 진행중',imminent:'⏰ 임박',overdue:'! 지연',pending:'— 대기'};
@@ -2946,7 +2946,7 @@ function renderHqArchTimeline(){
         html += `<td style="border-top:${borderT};border-bottom:${borderB};border-left:${borderLR};border-right:${borderLR};background:${cellBg};padding:5px 4px;vertical-align:top;min-width:${isCur?130:96}px">`;
         tasksHere.forEach(task=>{
           const taskIdx = cat.tasks.indexOf(task);
-          const key = taskKey(disc.key, ci, taskIdx);
+          const key = taskKey(disc.key, ci, task.name);
           const t = getDiscTaskStatus(site, key, task);
           let st = taskState(t);
           let badgeTxt='', ddayHtml='', fileHtml='';
@@ -5097,11 +5097,16 @@ function toggleTaskEditMode(){
 }
 
 // 전공종 업무 고유 키 (건축·전기·기계·건축토목·조경 공통, 배열 위치 기반 — DISCIPLINES 구조가 코드에 고정돼 있어 안정적)
-function taskKey(discKey, catIdx, taskIdx){ return discKey+'-'+catIdx+'-'+taskIdx; }
+// 업무 상태·결과물을 붙이는 키. 예전에는 업무 "순번"을 썼는데, 현장에서 업무를
+// 추가·삭제하면 순번이 밀려 상태와 결과물이 옆 업무로 옮겨 붙었다(83건 발생).
+// 그래서 순번 대신 "업무명"으로 붙인다. (양식·지침의 assetKey 와 같은 방식)
+function taskKey(discKey, catIdx, taskName){ return discKey+'|'+catIdx+'|'+taskName; }
 
 // 업무키('elec-3-12')로 업무명 찾기 — Drive에 저장할 파일명을 만들 때 씀
 function taskNameOfKey(key){
-  const m = String(key||'').match(/^([a-z]+)-(\d+)-(\d+)$/);
+  const parts = String(key||'').split('|');
+  if(parts.length === 3) return parts[2];                       // 새 형식: 공종|그룹|업무명
+  const m = String(key||'').match(/^([a-z]+)-(\d+)-(\d+)$/);    // 예전 형식(순번)도 읽어준다
   if(!m) return '';
   const disc = DISCIPLINES.find(d=>d.key===m[1]);
   const task = disc && disc.categories[+m[2]] && disc.categories[+m[2]].tasks[+m[3]];
@@ -5216,7 +5221,7 @@ function openTaskModal(discKey, catIdx, taskIdx, siteId){
   const task = cat.tasks[taskIdx];
   if(!task) return;
   tiCtx = { siteId, discKey, catIdx, taskIdx };
-  const key = taskKey(discKey, catIdx, taskIdx);
+  const key = taskKey(discKey, catIdx, task.name);
   document.getElementById('ti-title').textContent = task.name;
   document.getElementById('ti-id').textContent = discKey.toUpperCase()+'-'+String(taskIdx+1).padStart(3,'0');
   document.getElementById('ti-when').textContent = fmtDMonth(task.dm);
@@ -5738,7 +5743,7 @@ function renderMgrProcessMap(curDm){
 
           // 전기 포함 5개 공종 전체 동일 — 공정 현황 탭과 같은 실제 저장된 업무 상태(taskStatus)를 그대로 반영
           const taskIdx0 = cat.tasks.indexOf(task);
-          const key = taskKey(disc.key, ci, taskIdx0);
+          const key = taskKey(disc.key, ci, task.name);
           const t = getDiscTaskStatus(site, key, task);
           st = taskState(t);
           badgeTxt = st==='done' ? '<span class="badge done">✓ 완료</span>':
@@ -6181,7 +6186,7 @@ function renderFieldMap(curDm, filterKey){
           let st='pending', badgeTxt='', fileHtml='';
           const taskIdx = cat.tasks.indexOf(task);
           // 전기 포함 5개 공종 전체 동일 — 공정 현황 탭과 같은 실제 저장된 업무 상태(taskStatus)를 그대로 반영
-          const key = taskKey(disc.key, ci, taskIdx);
+          const key = taskKey(disc.key, ci, task.name);
           const t = getDiscTaskStatus(site, key, task);
           st = taskState(t);
           if(st==='done') badgeTxt='<span class="badge done" style="font-size:10px">✓ 완료</span>';
