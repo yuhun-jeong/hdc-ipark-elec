@@ -1469,6 +1469,7 @@ async function doLogin(){
   loadTaskAssetsFromSupabase();
   loadDiscStatusFromSupabase();
   loadMapChangeRequestsFromSupabase();
+  startSync();   // 이후 다른 사람이 바꾼 내용은 1분마다 자동 반영
 }
 
 // Supabase에서 전체 users 불러오기
@@ -2063,7 +2064,7 @@ let taskGuides = {}; // taskKey -> [{name,url,updatedAt}]
 //  실제 서버/DB 연동 전까지 새로고침해도 데이터 유지
 // ════════════════════════════
 const STORAGE_KEY='dxtElecStateV6';
-const DATA_VERSION='v7.0'; // 전기 STAGES 체계 폐지 — site.tasks 제거, 전기도 DISCIPLINES+site.taskStatus 기준으로 완전 통합. 옛 sites 캐시(.tasks 포함) 무효화 필요해서 버전업.
+const DATA_VERSION='v7.1'; // 전기 STAGES 체계 폐지 — site.tasks 제거, 전기도 DISCIPLINES+site.taskStatus 기준으로 완전 통합. 옛 sites 캐시(.tasks 포함) 무효화 필요해서 버전업.
 // Supabase에 공정 상태 저장
 async function saveStatusToSupabase(siteId, stageIdx, status, memo, fileName, deadline){
   try {
@@ -2512,27 +2513,32 @@ async function saveDiscStatusToSupabase(siteId, key, status, memo, files, deadli
 }
 
 // Supabase disc_task_status 테이블에서 공종 업무 상태 전체 불러오기 (다른 기기/사용자가 입력한 상태도 반영)
+// disc_task_status 한 묶음을 현장 업무 상태에 반영 (로그인 시·자동 동기화 공용)
+function mergeDiscStatusRows(rows){
+  (rows||[]).forEach(row=>{
+    const site = sites[(row.site_id||0) - 1];
+    if(!site) return;
+    if(!site.taskStatus) site.taskStatus = {};
+    const cur = site.taskStatus[row.task_key] || {};
+    site.taskStatus[row.task_key] = {
+      ...cur,
+      st: row.status || cur.st || 'pending',
+      memo: row.memo ?? cur.memo ?? '',
+      file: row.file_name ?? cur.file ?? null,
+      files: Array.isArray(row.files) ? row.files : (cur.files || null),
+      fileUrl: (Array.isArray(row.files) && row.files.length) ? (row.files[0].url||null) : (cur.fileUrl ?? null),
+      deadline: row.deadline || cur.deadline,
+    };
+  });
+  saveState();
+}
+
 async function loadDiscStatusFromSupabase(){
   try {
     const rows = await sb.select('disc_task_status', '?order=updated_at');
     if(!rows || !rows.length) return;
-    rows.forEach(row=>{
-      const siteIdx = (row.site_id||0) - 1;
-      const site = sites[siteIdx];
-      if(!site) return;
-      if(!site.taskStatus) site.taskStatus = {};
-      const cur = site.taskStatus[row.task_key] || {};
-      site.taskStatus[row.task_key] = {
-        ...cur,
-        st: row.status || cur.st || 'pending',
-        memo: row.memo ?? cur.memo ?? '',
-        file: row.file_name ?? cur.file ?? null,
-        files: Array.isArray(row.files) ? row.files : (cur.files || null),
-        fileUrl: (Array.isArray(row.files) && row.files.length) ? (row.files[0].url||null) : (cur.fileUrl ?? null),
-        deadline: row.deadline || cur.deadline,
-      };
-    });
-    saveState();
+    mergeDiscStatusRows(rows);
+    if(rows.length) lastDiscUpdatedAt = rows[rows.length-1].updated_at || lastDiscUpdatedAt;
     console.log(`disc_task_status 로드: ${rows.length}건`);
     if(document.getElementById('fpanel-status-disc')?.style.display==='flex') renderFieldDiscipline();
     if(document.getElementById('view-hq')?.classList.contains('active')){ renderHqArch(); renderHQ(); }
@@ -3820,19 +3826,19 @@ const DISCIPLINES = [
         {name:'물가변동 검토 (관공사, 매달)', dm:3},
         {name:'실정보고/설계변경 (해당시 마다)', dm:4},
         {name:'선급금 신청 (관공사)', dm:6},
-        {name:'선금정산확인원 (차수계약 종료시)', dm:21},
+        {name:'선금정산확인원1 (차수계약 종료시)', dm:21},
         {name:'선급금 신청 (관공사) (차수계약시 마다)', dm:22},
-        {name:'선금정산확인원 (차수계약 종료시)', dm:34},
+        {name:'선금정산확인원2 (차수계약 종료시)', dm:34},
         {name:'해빙기점검', dm:3},
-        {name:'우기대비점검', dm:5},
+        {name:'우기대비점검1', dm:5},
         {name:'동절기대비점검', dm:11},
         {name:'품질검수 (경기도만 해당)', dm:12},
-        {name:'해빙기 점검', dm:15},
-        {name:'우기대비점검', dm:17},
-        {name:'동절기 대비점검', dm:23},
-        {name:'해빙기 점검', dm:27},
-        {name:'우기대비점검', dm:29},
-        {name:'동절기 대비점검', dm:32},
+        {name:'해빙기 점검1', dm:15},
+        {name:'우기대비점검2', dm:17},
+        {name:'동절기 대비점검1', dm:23},
+        {name:'해빙기 점검2', dm:27},
+        {name:'우기대비점검3', dm:29},
+        {name:'동절기 대비점검2', dm:32},
         {name:'품질점검 (경기도만 해당)', dm:33},
         {name:'정기안전점검 업체선정 (지자체 공문발송)', dm:-1},
         {name:'폐기물 발생 및 처리현황(매월)', dm:1},
@@ -3870,7 +3876,7 @@ const DISCIPLINES = [
         {name:'조적, 미장', dm:8},
         {name:'내장', dm:12},
         {name:'석공사', dm:14},
-        {name:'타일', dm:18},
+        {name:'타일2', dm:18},
         {name:'도장/코킹', dm:20},
         {name:'잡철', dm:22},
         {name:'GRAPHIC', dm:24},
@@ -3887,7 +3893,7 @@ const DISCIPLINES = [
         {name:'목창호/방화문/AL창호', dm:11},
         {name:'욕실 Sill', dm:12},
         {name:'유리', dm:16},
-        {name:'타일', dm:17},
+        {name:'타일1', dm:17},
         {name:'석고보드', dm:18},
         {name:'발코니 H/R', dm:19},
         {name:'소화전함', dm:20},
@@ -3943,9 +3949,9 @@ const DISCIPLINES = [
         {name:'[프리콘팀] 경영진점검 (준공-1M이내)', dm:34},
         {name:'준공A/S보고 (준공+7일)', dm:35},
         {name:'인수인계서류업로드', dm:37},
-        {name:'ISO점검', dm:5},
-        {name:'ISO점검', dm:18},
-        {name:'ISO점검', dm:31},
+        {name:'ISO점검1', dm:5},
+        {name:'ISO점검2', dm:18},
+        {name:'ISO점검3', dm:31},
         {name:'준공품질품평회 (준공-38일)', dm:33},
         {name:'공용부점검_랩스 (준공-1M)', dm:34},
         {name:'공용부점검_랩스 (준공+1M)', dm:35},
@@ -4407,11 +4413,11 @@ const DISCIPLINES = [
         {name:'가스안전공사 기술검토 제출', dm:16},
         {name:'수압 Test [세대 난방,급수급탕]', dm:26},
         {name:'도시가스 완성검사 및 가스 공급원 통보', dm:30},
-        {name:'소방펌프 성능시험', dm:30},
-        {name:'열사용시설 완성검사 통보', dm:30},
+        {name:'소방펌프 성능시험1', dm:30},
+        {name:'열사용시설 완성검사 통보1', dm:30},
         {name:'제연System 성능시험', dm:31},
-        {name:'소방펌프 성능시험', dm:31},
-        {name:'열사용시설 완성검사 통보', dm:31},
+        {name:'소방펌프 성능시험2', dm:31},
+        {name:'열사용시설 완성검사 통보2', dm:31},
         {name:'소방시설 종합 성능시험', dm:32},
         {name:'기계공사 사용전 검사 신청', dm:32},
         {name:'건축설비설치확인서 제출', dm:33},
@@ -4758,8 +4764,104 @@ async function loadMapChangeRequestsFromSupabase(){
   try {
     const rows = await sb.select('map_change_requests', '?order=proposed_at.desc');
     if(rows) mapChangeRequests = rows;
-    if(document.getElementById('view-manager')?.classList.contains('active')){ renderManagerMap(); updateMgrQueueBadge(); }
+    if(rows && rows.length) lastMapChangeId = Math.max(...rows.map(r=>Number(r.id)||0));
+    // 승인된 변경을 실제 일정에 다시 적용한다.
+    // 옮긴 결과(task.dm)는 그 PC 브라우저에만 저장되므로, 이 재적용이 없으면 다른 PC에서는 원래 위치로 보인다.
+    const n = applyApprovedMapChanges(rows);
+    if(n) console.log(`업무프로세스맵 변경 ${n}건 반영`);
+    rerenderActiveViews();
   } catch(e){ console.log('map_change_requests 불러오기 실패 (테이블이 없으면 로컬에만 동작합니다):', e); }
+}
+
+// 승인된 변경 이력을 시간순으로 실제 일정에 반영한다.
+// 이미 반영된 PC에서 다시 돌려도 결과가 같도록(여러 번 적용해도 안전하게) 만들었다.
+function applyApprovedMapChanges(rows){
+  const list = (rows||[]).filter(r=>r && r.status==='approved').slice()
+    .sort((a,b)=> String(a.proposed_at||'').localeCompare(String(b.proposed_at||'')) || (Number(a.id)-Number(b.id)));
+  let n = 0;
+  list.forEach(req=>{
+    try {
+      const siteId = Number(req.site_id) - 1;
+      if(!sites[siteId]) return;
+      const disc = getSiteSchedule(siteId).disciplines.find(d=>d.key===req.disc_key);
+      const cat = disc && disc.categories[req.cat_idx];
+      if(!cat) return;
+      if(req.change_type==='add'){
+        const nm = req.payload && req.payload.name;
+        if(nm && !cat.tasks.some(t=>t.name===nm)){ cat.tasks.push({ name:nm, dm:req.payload.dm }); n++; }
+      } else if(req.change_type==='edit'){
+        const t = cat.tasks.find(x=>x.name===req.task_name);
+        const newDm = req.payload && req.payload.newDm;
+        if(t && newDm!=null && t.dm!==newDm){ t.dm = newDm; n++; }
+      } else if(req.change_type==='delete'){
+        const i = cat.tasks.findIndex(x=>x.name===req.task_name);
+        if(i>=0){ cat.tasks.splice(i,1); n++; }
+      }
+    } catch(e){ console.log('변경 이력 반영 오류:', req && req.id, e); }
+  });
+  if(n) saveState();
+  return n;
+}
+
+// 지금 보고 있는 화면만 다시 그린다 (관리자 화면은 입력 중일 수 있어 건드리지 않음)
+function rerenderActiveViews(){
+  const active = id => document.getElementById(id)?.classList.contains('active');
+  if(active('view-manager')){ renderManagerMap(); updateMgrQueueBadge(); }
+  if(active('view-field')){
+    if(document.getElementById('fpanel-map')?.style.display==='block') renderFieldProcessMap();
+    else renderFieldDiscipline();
+  }
+  if(active('view-hq')){ renderHqArch(); renderHQ(); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  다른 사람이 바꾼 내용 자동 반영 (1분마다)
+//  예전에는 로그인할 때 한 번만 불러와서, 옆 사람이 옮긴 업무나 바꾼 상태가
+//  새로 로그인하기 전까지 안 보였다.
+// ══════════════════════════════════════════════════════════
+let lastMapChangeId = 0;
+let lastDiscUpdatedAt = '';
+let syncTimer = null;
+const SYNC_INTERVAL_MS = 60000;
+
+async function syncFromSupabase(){
+  if(!currentUser) return;
+  // 팝업에서 입력 중이거나 업무를 끌고 있는 중에는 화면을 건드리지 않는다
+  if(document.querySelector('.overlay.open')) return;
+  if(typeof fmDrag!=='undefined' && fmDrag) return;
+  if(typeof amDrag!=='undefined' && amDrag) return;
+  let changed = false;
+
+  try {
+    const mc = await sb.select('map_change_requests', `?id=gt.${lastMapChangeId}&order=id`);
+    if(mc && mc.length){
+      lastMapChangeId = Math.max(lastMapChangeId, ...mc.map(r=>Number(r.id)||0));
+      mapChangeRequests = mc.slice().reverse().concat(mapChangeRequests);   // 최신이 앞
+      applyApprovedMapChanges(mc);
+      changed = true;
+    }
+  } catch(e){ console.log('변경 이력 동기화 실패:', e); }
+
+  try {
+    const q = lastDiscUpdatedAt
+      ? `?updated_at=gt.${encodeURIComponent(lastDiscUpdatedAt)}&order=updated_at`
+      : '?order=updated_at';
+    const ds = await sb.select('disc_task_status', q);
+    if(ds && ds.length){
+      mergeDiscStatusRows(ds);
+      lastDiscUpdatedAt = ds[ds.length-1].updated_at || lastDiscUpdatedAt;
+      changed = true;
+    }
+  } catch(e){ console.log('업무 상태 동기화 실패:', e); }
+
+  if(changed) rerenderActiveViews();
+}
+
+function startSync(){
+  if(syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(syncFromSupabase, SYNC_INTERVAL_MS);
+  // 다른 창을 보다가 돌아오면 바로 한 번 맞춘다
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) syncFromSupabase(); });
 }
 
 function isManagerOfSite(siteId){
