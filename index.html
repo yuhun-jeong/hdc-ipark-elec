@@ -5622,7 +5622,7 @@ function renderManagerMap(){
   }).join('');
 
   renderMgrProcessMap(curDm);
-  renderAlerts(curDm);
+  renderAlerts();
 }
 
 function renderMgrProcessMap(curDm){
@@ -5788,7 +5788,10 @@ function renderMgrProcessMap(curDm){
 }
 
 
-function renderAlerts(curDm){
+// 체크포인트 목록 — 예전에는 "지금 달 기준 dm 몇 칸 이내"로 대충 걸러서, 이미 완료 처리한
+// 업무도 계속 지연/임박으로 떴다(현장 실제 상태와 어긋남). 공종 카드(discCardStat)와 똑같이
+// taskState()로 판정해서, 완료된 업무는 빠지고 실제 목표일 기준 지연·임박만 남도록 맞췄다.
+function renderAlerts(){
   const list = document.getElementById('mgr-alert-list');
   const siteId = currentMgrSiteId();
   const site = sites[siteId];
@@ -5796,9 +5799,9 @@ function renderAlerts(curDm){
   const alerts = [];
   getSiteSchedule(siteId).disciplines.forEach(disc=>{
     collectDiscTasks(site, disc).forEach(it=>{
-      const dm = it.task.dm;
-      if(dm>=curDm-2 && dm<=curDm+1 && dm<curDm) alerts.push({disc, it, st:'late'});
-      else if(dm===curDm || dm===curDm+1) alerts.push({disc, it, st:'prog'});
+      const state = taskState(it.status);
+      if(state==='overdue') alerts.push({disc, it, st:'late'});
+      else if(state==='imminent') alerts.push({disc, it, st:'prog'});
     });
   });
   if(!alerts.length){
